@@ -4,15 +4,13 @@
 """
 from __future__ import unicode_literals
 import sys
-import os, inspect
+import os
 import argparse
 import tempfile
 import urllib2
 import urllib
 import logging
 import shutil
-import time
-import resource
 import hashlib
 import basin
 import boto
@@ -21,8 +19,10 @@ from collections import namedtuple
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='content addressable storage in AWS S3')
-    parser.add_argument('url', nargs='+', help='URL or path of source file to stash')
+    parser = argparse.ArgumentParser(
+        description='content addressable storage in AWS S3')
+    parser.add_argument('url', nargs='+',
+                        help='URL or path of source file to stash')
     parser.add_argument('-b', '--bucket_base', nargs="?",
                         help='URL or path of source file to stash')
     parser.add_argument('-t', '--tempdir', required=False)
@@ -40,7 +40,6 @@ def main(argv=None):
         assert argv.bucket_base, "`-b` or `BUCKET_BASE` must be set"
         bucket_base = argv.bucket_base[0]
 
-
     if not argv.warnings:
         # supress warnings
         # http://stackoverflow.com/a/2047600/1763984
@@ -49,18 +48,19 @@ def main(argv=None):
 
     if argv.tempdir:
         tempfile.tempdir = argv.tempdir
-    
+
     # set debugging level
     numeric_level = getattr(logging, argv.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % argv.loglevel)
     logging.basicConfig(level=numeric_level, )
 
-    # if being used in a library, probably want to be able to recycle connection?
+    # if being used in a library, probably want to be able to recycle
+    # connection?
     conn = boto.connect_s3()
     for url in argv.url:
-        print("{0}\t{1}\t{2}\t{3}".format(*
-            md5s3stash(url, bucket_base, conn)
+        print("{0}\t{1}\t{2}\t{3}".format(
+            *md5s3stash(url, bucket_base, conn)
         ))
 
 
@@ -102,23 +102,26 @@ def md5_to_bucket(md5, bucket_set):
     # divide by the length of the alphabet and take the remainder
     bucket = int_value % len(ALPHABET)
     return basin.encode(ALPHABET, bucket)
-    
-    
+
+
 def checkChunks(url):
-    """Helper to download large files the only arg is a url this file will go to a temp directory
-       the file will also be downloaded in chunks and md5 checksum is returned
-       based on downloadChunks@https://gist.github.com/gourneau/1430932 
+    """
+       Helper to download large files the only arg is a url this file
+       will go to a temp directory the file will also be downloaded in
+       chunks and md5 checksum is returned
+
+       based on downloadChunks@https://gist.github.com/gourneau/1430932
        and http://www.pythoncentral.io/hashing-files-with-python/
     """
     baseFile = os.path.basename(url)
     temp_path = tempfile.mkdtemp(prefix="md5s3_")
-    logging.getLogger('MD5S3').info("temp path %s" % temp_path )
+    logging.getLogger('MD5S3').info("temp path %s" % temp_path)
 
     hasher = hashlib.new('md5')
     BLOCKSIZE = 1024 * hasher.block_size
 
     try:
-        file = os.path.join(temp_path,baseFile)
+        file = os.path.join(temp_path, baseFile)
         req = urllib.urlopen(url)  # urllib works with normal file paths
         mime_type = req.info()['Content-type']
         downloaded = 0
@@ -127,28 +130,30 @@ def checkChunks(url):
                 chunk = req.read(BLOCKSIZE)
                 hasher.update(chunk)
                 downloaded += len(chunk)
-                if not chunk: break
+                if not chunk:
+                    break
                 fp.write(chunk)
     except urllib2.HTTPError, e:
-        print "HTTP Error:",e.code , url
+        print "HTTP Error:", e.code, url
         return False
     except urllib2.URLError, e:
-        print "URL Error:",e.reason , url
+        print "URL Error:", e.reason, url
         return False
- 
-    return file, temp_path, baseFile, hasher.hexdigest(), mime_type
 
+    return file, temp_path, baseFile, hasher.hexdigest(), mime_type
 
 
 def s3move(place1, place2, mime, s3):
     l = logging.getLogger('MD5S3:s3move')
-    l.debug({ 
-      'place1': place1,
-      'place2': place2,
-      'mime': mime,
-      's3': s3,
+    l.debug({
+        'place1': place1,
+        'place2': place2,
+        'mime': mime,
+        's3': s3,
     })
-    parts = urlparse.urlsplit(place2)  # SplitResult(scheme='s3', netloc='test.pdf', path='/dkd', query='', fragment='')
+    parts = urlparse.urlsplit(place2)
+    # SplitResult(scheme='s3', netloc='test.pdf', path='/dkd', query=''
+    # , fragment='')
     try:
         bucket = s3.get_bucket(parts.netloc)
         l.debug('bucket exists')
@@ -159,13 +164,13 @@ def s3move(place1, place2, mime, s3):
         key = bucket.new_key(parts.path)
         key.set_contents_from_filename(place1)
         key.set_metadata("Content-Type", mime)
-        #key.set_acl('public-read')
+        # key.set_acl('public-read')
         l.debug('file sent to s3')
     else:
         l.info('key existed already')
 
 
-# main() idiom for importing into REPL for debugging 
+# main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
 
