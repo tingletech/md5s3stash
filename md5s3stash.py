@@ -23,7 +23,7 @@ from collections import namedtuple
 def main(argv=None):
     parser = argparse.ArgumentParser(description='content addressable storage in AWS S3')
     parser.add_argument('url', nargs='+', help='URL or path of source file to stash')
-    parser.add_argument('-b', '--bucket_set', nargs=1, required=True, 
+    parser.add_argument('-b', '--bucket_base', nargs="?",
                         help='URL or path of source file to stash')
     parser.add_argument('-t', '--tempdir', required=False)
     parser.add_argument('-w', '--warnings', default=False,
@@ -33,6 +33,13 @@ def main(argv=None):
 
     if argv is None:
         argv = parser.parse_args()
+
+    try:
+        bucket_base = os.environ['BUCKET_BASE']
+    except KeyError:
+        assert argv.bucket_base, "`-b` or `BUCKET_BASE` must be set"
+        bucket_base = argv.bucket_base[0]
+
 
     if not argv.warnings:
         # supress warnings
@@ -53,7 +60,7 @@ def main(argv=None):
     conn = boto.connect_s3()
     for url in argv.url:
         print("{0}\t{1}\t{2}\t{3}".format(*
-            md5s3stash(url, argv.bucket_set[0], conn)
+            md5s3stash(url, bucket_base, conn)
         ))
 
 
