@@ -24,7 +24,7 @@ setup(
     py_modules=['md5s3stash', ],
     entry_points={
         'console_scripts': [
-            'checker = md5s3stash:main',
+            'md5s3stash = md5s3stash:main',
         ]
     },
     # test_suite='test',
