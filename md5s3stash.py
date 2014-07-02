@@ -61,10 +61,13 @@ def md5s3stash(url, bucket_set, conn):
     """ stash a file at `url` in the named `bucket_set` """
     (inputfile, tdir, baseFile, md5, mime_type) = checkChunks(url)
     s3_url = md5_to_s3_url(md5, bucket_set)
-    s3move(baseFile, s3_url, mime_type, conn)
+    temp_file = os.path.join(tdir, baseFile)
+    s3move(temp_file, s3_url, mime_type, conn)
     shutil.rmtree(tdir)
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type')
-    return StashReport(url, md5, s3_url, mime_type)
+    report = StashReport(url, md5, s3_url, mime_type)
+    logging.getLogger('MD5S3:stash').info(report)
+    return report
 
 
 def md5_to_s3_url(md5, bucket_set):
@@ -131,14 +134,28 @@ def checkChunks(url):
 
 
 def s3move(place1, place2, mime, s3):
+    l = logging.getLogger('MD5S3:s3move')
+    l.debug({ 
+      'place1': place1,
+      'place2': place2,
+      'mime': mime,
+      's3': s3,
+    })
     parts = urlparse.urlsplit(place2)  # SplitResult(scheme='s3', netloc='test.pdf', path='/dkd', query='', fragment='')
-    bucket = s3.get_bucket(parts.netloc)
-    if not s3.lookup(bucket):
-        s3.create_bucket(bucket)
-    key = bucket.new_key(parts.path)
-    key.set_contents_from_filename(place1)
-    key.set_metadata("Content-Type", mime)
-    #key.set_acl('public-read')
+    try:
+        bucket = s3.get_bucket(parts.netloc)
+        l.debug('bucket exists')
+    except boto.exception.S3ResponseError:
+        bucket = s3.create_bucket(parts.netloc)
+        l.debug('bucket created')
+    if not(bucket.get_key(parts.path)):
+        key = bucket.new_key(parts.path)
+        key.set_contents_from_filename(place1)
+        key.set_metadata("Content-Type", mime)
+        #key.set_acl('public-read')
+        l.debug('file sent to s3')
+    else:
+        l.info('key existed already')
 
 
 # main() idiom for importing into REPL for debugging 
