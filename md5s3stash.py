@@ -64,11 +64,15 @@ def main(argv=None):
         ))
 
 
-def md5s3stash(url, bucket_set, conn):
-    """ stash a file at `url` in the named `bucket_set` """
+def md5s3stash(url, bucket_base, conn=None):
+    """ stash a file at `url` in the named `bucket_base` ,
+        `conn` is an optional boto.connect_s3()
+    """
     (inputfile, tdir, baseFile, md5, mime_type) = checkChunks(url)
-    s3_url = md5_to_s3_url(md5, bucket_set)
+    s3_url = md5_to_s3_url(md5, bucket_base)
     temp_file = os.path.join(tdir, baseFile)
+    if conn is None:
+        conn = boto.connect_s3()
     s3move(temp_file, s3_url, mime_type, conn)
     shutil.rmtree(tdir)
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type')
@@ -77,17 +81,17 @@ def md5s3stash(url, bucket_set, conn):
     return report
 
 
-def md5_to_s3_url(md5, bucket_set):
-    """ calculate the s3 URL given an md5 and an bucket_set """
+def md5_to_s3_url(md5, bucket_base):
+    """ calculate the s3 URL given an md5 and an bucket_base """
     return "s3://{0}.{1}/{2}".format(
-        md5_to_bucket(md5, bucket_set),
-        bucket_set,
+        md5_to_bucket(md5),
+        bucket_base,
         md5
     )
 
 
-def md5_to_bucket(md5, bucket_set):
-    """ calculate the bucket given an md5 and a bucket_set """
+def md5_to_bucket(md5):
+    """ calculate the bucket given an md5 and a bucket_base """
     # "Consider utilizing multiple buckets that start with different
     # alphanumeric characters. This will ensure a degree of partitioning
     # from the start. The higher your volume of concurrent PUT and
