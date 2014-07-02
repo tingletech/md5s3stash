@@ -35,13 +35,11 @@ def main(argv=None):
     if argv is None:
         argv = parser.parse_args()
 
-    # environment wins over command line parameter??
-    # seems like a bug
-    try:
-        bucket_base = os.environ['BUCKET_BASE']
-    except KeyError:
-        assert argv.bucket_base, "`-b` or `BUCKET_BASE` must be set"
+    if argv.bucket_base:
         bucket_base = argv.bucket_base[0]
+    else:
+        assert 'BUCKET_BASE' in os.environ, "`-b` or `BUCKET_BASE` must be set"
+        bucket_base = os.environ['BUCKET_BASE']
 
     if not argv.warnings:
         # supress warnings
