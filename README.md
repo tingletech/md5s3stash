@@ -17,9 +17,27 @@ Assumptions:
 
 ## Command line use
 
-see
+see `md5s3stash -h`
 ```
-md5s3stash -h
+usage: md5s3stash [-h] [-b [BUCKET_BASE]] [-t TEMPDIR] [-w]
+                  [--loglevel LOGLEVEL]
+                  url [url ...]
+
+content addressable storage in AWS S3
+
+positional arguments:
+  url                   URL or path of source file to stash
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b [BUCKET_BASE], --bucket_base [BUCKET_BASE]
+                        this must be a unique name in all of AWS S3
+  -t TEMPDIR, --tempdir TEMPDIR
+                        if your files might be large, make sure this is on a
+                        big disk
+  -w, --warnings        show python `DeprecationWarning`s supressed by default
+  --loglevel LOGLEVEL
+
 ```
 
 ## Library use

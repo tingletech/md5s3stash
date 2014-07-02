@@ -24,16 +24,19 @@ def main(argv=None):
     parser.add_argument('url', nargs='+',
                         help='URL or path of source file to stash')
     parser.add_argument('-b', '--bucket_base', nargs="?",
-                        help='URL or path of source file to stash')
-    parser.add_argument('-t', '--tempdir', required=False)
+                        help='this must be a unique name in all of AWS S3')
+    parser.add_argument('-t', '--tempdir', required=False,
+                        help="if your files might be large, make sure this is on a big disk")
     parser.add_argument('-w', '--warnings', default=False,
-                        help='show python warnings supressed by default',
+                        help='show python `DeprecationWarning`s supressed by default',
                         required=False, action='store_true')
     parser.add_argument('--loglevel', default='ERROR', required=False)
 
     if argv is None:
         argv = parser.parse_args()
 
+    # environment wins over command line parameter??
+    # seems like a bug
     try:
         bucket_base = os.environ['BUCKET_BASE']
     except KeyError:
