@@ -85,21 +85,25 @@ def md5s3stash(url, bucket_base, conn=None):
 def md5_to_s3_url(md5, bucket_base):
     """ calculate the s3 URL given an md5 and an bucket_base """
     return "s3://{0}.{1}/{2}".format(
-        md5_to_bucket(md5),
+        md5_to_bucket_shard(md5),
         bucket_base,
         md5
     )
 
 
-def md5_to_bucket(md5):
+def md5_to_bucket_shard(md5):
     """ calculate the bucket given an md5 and a bucket_base """
     # "Consider utilizing multiple buckets that start with different
     # alphanumeric characters. This will ensure a degree of partitioning
     # from the start. The higher your volume of concurrent PUT and
-    # GET requests, the more impact this will likely have." --
-    # http://aws.amazon.com/articles/1904?_encoding=UTF8&jiveRedirect=1
+    # GET requests, the more impact this will likely have."
+    #   http://aws.amazon.com/articles/1904
+    # "Bucket names must be a series of one or more labels. Adjacent
+    # labels are separated by a single period (.). [...] Each label must 
+    # start and end with a lowercase letter or a number. "
+    #   http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+    # see also:  http://en.wikipedia.org/wiki/Base_36
     ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
-
     # http://stats.stackexchange.com/a/70884/14900
     # take the first two digits of the hash and turn that into an inteter
     # this should be evenly distributed

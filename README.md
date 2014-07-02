@@ -43,7 +43,7 @@ optional arguments:
 ## Library use
 
 see [the source](https://github.com/tingletech/md5s3stash/blob/master/md5s3stash.py)
-for an example.  `md5s3stash`, `md5_to_s3_url`, and `md5_to_bucket` probably most useful.
+for an example.  `md5s3stash`, `md5_to_s3_url`, and `md5_to_bucket_shard` probably most useful.
 
 ## Configuration
 
