@@ -92,16 +92,16 @@ def md5_to_s3_url(md5, bucket_base):
 
 
 def md5_to_bucket_shard(md5):
-    """ calculate the bucket given an md5 and a bucket_base """
+    """ calculate the shard label of the bucket name from md5 """
     # "Consider utilizing multiple buckets that start with different
     # alphanumeric characters. This will ensure a degree of partitioning
     # from the start. The higher your volume of concurrent PUT and
     # GET requests, the more impact this will likely have."
-    #   http://aws.amazon.com/articles/1904
+    #  -- http://aws.amazon.com/articles/1904
     # "Bucket names must be a series of one or more labels. Adjacent
     # labels are separated by a single period (.). [...] Each label must 
     # start and end with a lowercase letter or a number. "
-    #   http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+    #  -- http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
     # see also:  http://en.wikipedia.org/wiki/Base_36
     ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
     # http://stats.stackexchange.com/a/70884/14900
