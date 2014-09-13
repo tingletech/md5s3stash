@@ -45,6 +45,16 @@ optional arguments:
 see [the source](https://github.com/tingletech/md5s3stash/blob/master/md5s3stash.py)
 for an example.  `md5s3stash`, `md5_to_s3_url`, and `md5_to_bucket_shard` probably most useful.
 
+## Thumbnail server
+
+INCOMPLETE
+
+`thumbnail.py` is a [pilbox extension](http://agschwender.github.io/pilbox/#extension)
+to generate thumbnails out of the md5s3stash.  Will run in ELB
+behind cloudfront.  Runs on `http://localhost:8888/` by default.
+
+Only one URL pattern is supported `http://localhost:8888/{width}x{height}/{bucketBase}/{md5}`
+
 ## Configuration
 
 The `bucket_base` parameter, command line arguments `-b` and `--bucket_base`, and environmental variable `BUCKET_BASE`
