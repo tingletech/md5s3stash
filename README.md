@@ -47,13 +47,13 @@ for an example.  `md5s3stash`, `md5_to_s3_url`, and `md5_to_bucket_shard` probab
 
 ## Thumbnail server
 
-INCOMPLETE
-
 `thumbnail.py` is a [pilbox extension](http://agschwender.github.io/pilbox/#extension)
-to generate thumbnails out of the md5s3stash.  Will run in ELB
+to generate thumbnails out of the md5s3stash.  Will run in elastic beanstalk
 behind cloudfront.  Runs on `http://localhost:8888/` by default.
 
-Only one URL pattern is supported `http://localhost:8888/{width}x{height}/{bucketBase}/{md5}`
+Only one URL pattern is supported `http://localhost:8888/{mode}/{width}x{height}/{bucketBase}/{md5}`
+
+`mode` is `clip`, `crop`, `fill`, or `scale`
 
 ## Configuration
 

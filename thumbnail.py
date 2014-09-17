@@ -12,23 +12,24 @@ import os
 class ThumbnailApplication(PilboxApplication):
     def get_handlers(self):
         # URL regex to handler mapping
-        return [(r"/(\d+)x(\d+)/(.+)", ThumbnailImageHandler)]
-        #            w, h, md5
+        return [(r"/(.+)/(\d+)x(\d+)/(.+)", ThumbnailImageHandler)]
+        #            mode, w, h, md5
 
 
 class ThumbnailImageHandler(ImageHandler):
     def prepare(self):
-        # TODO: default to clip, discard all other arguments
-        assert 'BUCKET_BASE' in os.environ, "`BUCKET_BASE` must be set"
         self.args = self.request.arguments.copy()
+        self.settings['content_type_from_image'] = True
+        assert 'BUCKET_BASE' in os.environ, "`BUCKET_BASE` must be set"
 
     @tornado.gen.coroutine
-    def get(self, w, h, md5):
+    def get(self, mode, w, h, md5):
         
         url = md5_to_http_url(md5, os.environ['BUCKET_BASE'])
         self.args.update(dict(w=w, h=h, url=url))
 
         self.validate_request()
+        self.settings['mode'] = mode
         resp = yield self.fetch_image()
         self.render_image(resp)
 
