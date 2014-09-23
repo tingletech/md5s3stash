@@ -12,7 +12,7 @@ import os
 class ThumbnailApplication(PilboxApplication):
     def get_handlers(self):
         # URL regex to handler mapping
-        return [(r"/(.+)/(\d+)x(\d+)/(.+)", ThumbnailImageHandler)]
+        return [(r"/([^/]+)/(\d+)x(\d+)/(.+)", ThumbnailImageHandler)]
         #            mode, w, h, md5
 
 
