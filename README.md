@@ -47,13 +47,62 @@ for an example.  `md5s3stash`, `md5_to_s3_url`, and `md5_to_bucket_shard` probab
 
 ## Thumbnail server
 
-`thumbnail.py` is a [pilbox extension](http://agschwender.github.io/pilbox/#extension)
+[pilbox extension](http://agschwender.github.io/pilbox/#extension)
 to generate thumbnails out of the md5s3stash.  Will run in elastic beanstalk
 behind cloudfront.  Runs on `http://localhost:8888/` by default.
 
 Only one URL pattern is supported `http://localhost:8888/{mode}/{width}x{height}/{bucketBase}/{md5}`
 
 `mode` is `clip`, `crop`, `fill`, or `scale`
+
+```
+thumbnail_server --help
+Usage: thumbnail_server [OPTIONS]
+
+Options:
+
+  --allowed_hosts                  valid hosts (default [])
+  --allowed_operations             valid ops (default [])
+  --background                     default hexadecimal bg color (RGB or ARGB)
+  --client_key                     client key
+  --client_name                    client name
+  --config                         path to configuration file
+  --content_type_from_image        override content type using image mime type
+  --debug                          run in debug mode (default False)
+  --expand                         default to expand when rotating
+  --filter                         default filter to use when resizing
+  --format                         default format to use when outputting
+  --help                           show this help information
+  --implicit_base_url              prepend protocol/host to url paths
+  --max_requests                   max concurrent requests (default 40)
+  --mode                           default mode to use when resizing
+  --operation                      default operation to perform
+  --optimize                       default to optimize when saving
+  --port                           run on the given port (default 8888)
+  --position                       default cropping position
+  --quality                        default jpeg quality, 0-100
+  --timeout                        request timeout in seconds (default 10)
+  --validate_cert                  validate certificates (default True)
+
+site-packages/tornado/log.py options:
+
+  --log_file_max_size              max size of log files before rollover
+                                   (default 100000000)
+  --log_file_num_backups           number of log files to keep (default 10)
+  --log_file_prefix=PATH           Path prefix for log files. Note that if you
+                                   are running multiple tornado processes,
+                                   log_file_prefix must be different for each
+                                   of them (e.g. include the port number)
+  --log_to_stderr                  Send log output to stderr (colorized if
+                                   possible). By default use stderr if
+                                   --log_file_prefix is not set and no other
+                                   logging is configured.
+  --logging=debug|info|warning|error|none 
+                                   Set the Python log level. If 'none', tornado
+                                   won't touch the logging configuration.
+                                   (default info)
+
+```
 
 ## Configuration
 
