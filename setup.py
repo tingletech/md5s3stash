@@ -10,7 +10,7 @@ setup(
     name='md5s3stash',
     description='content addressable storage in AWS S3',
     long_description=read('README.md'),
-    version='0.2.0',
+    version='0.2.1',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -25,7 +25,6 @@ setup(
     entry_points={
         'console_scripts': [
             'md5s3stash = md5s3stash:main',
-            'thumbnail_server = thumbnail:main',
         ]
     },
     # test_suite='test',

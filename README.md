@@ -56,7 +56,7 @@ Only one URL pattern is supported `http://localhost:8888/{mode}/{width}x{height}
 `mode` is `clip`, `crop`, `fill`, or `scale`
 
 ```
-thumbnail_server --help
+python thumbnail.py --help
 Usage: thumbnail_server [OPTIONS]
 
 Options:
