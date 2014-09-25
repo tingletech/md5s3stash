@@ -47,6 +47,11 @@ for an example.  `md5s3stash`, `md5_to_s3_url`, and `md5_to_bucket_shard` probab
 
 ## Thumbnail server
 
+```
+# needed for Pillow (python image library) used by pilbox
+brew install libtiff libjpeg webp little-cms2
+```
+
 [pilbox extension](http://agschwender.github.io/pilbox/#extension)
 to generate thumbnails out of the md5s3stash.  Will run in elastic beanstalk
 behind cloudfront.  Runs on `http://localhost:8888/` by default.
