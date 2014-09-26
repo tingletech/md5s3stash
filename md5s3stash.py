@@ -33,6 +33,10 @@ def main(argv=None):
                         help='show python `DeprecationWarning`s supressed by default',
                         required=False, action='store_true')
     parser.add_argument('--loglevel', default='ERROR', required=False)
+    parser.add_argument('-u', '--username', required=False,
+                        help='username for downloads requiring BasicAuth')
+    parser.add_argument('-p', '--password', required=False,
+                        help='password for downloads requiring BasicAuth')
 
     if argv is None:
         argv = parser.parse_args()
@@ -52,6 +56,9 @@ def main(argv=None):
     if argv.tempdir:
         tempfile.tempdir = argv.tempdir
 
+    auth = None
+    if argv.username:
+        auth = (argv.username, argv.password)
     # set debugging level
     numeric_level = getattr(logging, argv.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
@@ -63,7 +70,7 @@ def main(argv=None):
     conn = boto.connect_s3()
     for url in argv.url:
         print("{0}\t{1}\t{2}\t{3}".format(
-            *md5s3stash(url, bucket_base, conn)
+            *md5s3stash(url, bucket_base, conn, url_auth=auth)
         ))
 
 
