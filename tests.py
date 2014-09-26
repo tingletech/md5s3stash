@@ -20,6 +20,17 @@ def capture(command, *args, **kwargs):
   yield sys.stdout.read()
   sys.stdout = out
 
+class FakeReq():
+    def __init__(self, strdata):
+        self.io = StringIO(strdata)
+    def info(self):
+        return {'Content-type':'text/html'}
+    def read(self, chunk):
+        return self.io.read(chunk)
+
+
+################################################################################
+
 class CheckChunksTestCase(unittest.TestCase):
     '''Test that the md5s3stash test case supports authentication
     '''
@@ -46,6 +57,14 @@ class CheckChunksTestCase(unittest.TestCase):
         self.assertTrue(os.path.isdir(self.tdir))
         self.assertEqual(os.stat(inputfile).st_size, 95)
 
+    @patch('md5s3stash.urlopen_with_auth')
+    def test_local_file_download_wauth(self, mock_urlopen):
+        '''To see that the checkChunks accepts an auth argument'''
+        mock_urlopen.return_value = FakeReq('test resp')
+        (inputfile, self.tdir, baseFile, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath, auth=('username','password'))
+        self.assertEqual(baseFile, '1x1.png')
+        mock_urlopen.assert_called_once_with('/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png', ('username', 'password'))
+        
     @patch('urllib.urlopen')
     def test_HTTPError(self, mock_urlopen):
         '''Test handling of HTTPError from urllib'''
@@ -118,6 +137,32 @@ class Md5toURLTestCase(unittest.TestCase):
 
     def test_md5_to_bucket_shard(self):
         self.assertEqual(md5s3stash.md5_to_bucket_shard(self.md5), '1')
+
+class md5s3stash_TestCase(unittest.TestCase):
+    '''Want to test pass through of auth credentials.
+    Currently will punt and mock rest of interactions
+    '''
+    def setUp(self):
+        super(md5s3stash_TestCase, self).setUp()
+        self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
+
+    
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_md5s3stash_with_auth(self, mock_s3move, mock_urlopen):
+        mock_urlopen.return_value = FakeReq('test resp')
+        report = md5s3stash.md5s3stash(self.testfilepath, 'fake-bucket',
+                                conn='FAKE CONN',
+                                auth=('username', 'password'))
+        mock_urlopen.assert_called_once_with(
+          '/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png',
+          ('username', 'password'))
+        self.assertEqual(report.mime_type, 'text/html')
+        self.assertEqual(report.md5, '85b5a0deaa11f3a5d1762c55701c03da')
+        self.assertEqual(report.url,
+           '/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png')
+        self.assertEqual(report.s3_url,
+            's3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da')
 
 
 if __name__=='__main__':

@@ -11,6 +11,7 @@ import urllib2
 import urllib
 import urlparse
 import base64
+import uuid
 import logging
 import shutil
 import hashlib
@@ -67,11 +68,11 @@ def main(argv=None):
         ))
 
 
-def md5s3stash(url, bucket_base, conn=None):
+def md5s3stash(url, bucket_base, conn=None, auth=None):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
     """
-    (inputfile, tdir, baseFile, md5, mime_type) = checkChunks(url)
+    (inputfile, tdir, baseFile, md5, mime_type) = checkChunks(url, auth)
     s3_url = md5_to_s3_url(md5, bucket_base)
     temp_file = os.path.join(tdir, baseFile)
     if conn is None:
@@ -144,7 +145,7 @@ def urlopen_with_auth(url, auth=None):
         return urllib2.urlopen(req)
         
 
-def checkChunks(url):
+def checkChunks(url, auth=None):
     """
        Helper to download large files the only arg is a url this file
        will go to a temp directory the file will also be downloaded in
@@ -162,7 +163,7 @@ def checkChunks(url):
 
     try:
         file = os.path.join(temp_path, baseFile)
-        req = urllib.urlopen(url)  # urllib works with normal file paths
+        req = urlopen_with_auth(url, auth)  # urllib works with normal file paths
         mime_type = req.info()['Content-type']
         downloaded = 0
         with open(file, 'wb') as fp:
