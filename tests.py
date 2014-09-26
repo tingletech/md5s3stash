@@ -37,32 +37,28 @@ class CheckChunksTestCase(unittest.TestCase):
     def setUp(self):
         super(CheckChunksTestCase, self).setUp()
         self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
-        self.tdir = None
+        self.temp_file = None
 
     def tearDown(self):
         super(CheckChunksTestCase, self).tearDown()
-        if self.tdir:
-            shutil.rmtree(self.tdir)
+        if self.temp_file:
+            os.remove(self.temp_file)
 
     def test_local_file_download(self):
     #return file, temp_path, baseFile, hasher.hexdigest(), mime_type
-        (inputfile, self.tdir, baseFile, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath)
-        self.assertEqual(baseFile, '1x1.png')
+        (self.temp_file, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath)
         self.assertEqual(md5, '71a50dbba44c78128b221b7df7bb51f1')
         self.assertEqual(mime_type, 'image/png')
         #how to check the tmp files?
-        self.assertIn('md5s3', inputfile)
-        self.assertIn('md5s3', self.tdir)
-        self.assertTrue(os.path.isfile(inputfile))
-        self.assertTrue(os.path.isdir(self.tdir))
-        self.assertEqual(os.stat(inputfile).st_size, 95)
+        self.assertIn('md5s3', self.temp_file)
+        self.assertTrue(os.path.isfile(self.temp_file))
+        self.assertEqual(os.stat(self.temp_file).st_size, 95)
 
     @patch('md5s3stash.urlopen_with_auth')
     def test_local_file_download_wauth(self, mock_urlopen):
         '''To see that the checkChunks accepts an auth argument'''
         mock_urlopen.return_value = FakeReq('test resp')
-        (inputfile, self.tdir, baseFile, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath, auth=('username','password'))
-        self.assertEqual(baseFile, '1x1.png')
+        (self.temp_file, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath, auth=('username','password'))
         mock_urlopen.assert_called_once_with('/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png', ('username', 'password'))
         
     @patch('urllib.urlopen')
@@ -87,7 +83,7 @@ class CheckChunksTestCase(unittest.TestCase):
         '''Test handling of IOError from urllib.
         Current raise IOError'''
         try:
-            (inputfile, self.tdir, baseFile, md5, mime_type) = md5s3stash.checkChunks('./this-path-is-bogus')
+            (self.temp_file, md5, mime_type) = md5s3stash.checkChunks('./this-path-is-bogus')
         except IOError:
             return True
         self.fail("Didn't raise IOError for file path ./this-path-is-bogus")
@@ -153,7 +149,7 @@ class md5s3stash_TestCase(unittest.TestCase):
         mock_urlopen.return_value = FakeReq('test resp')
         report = md5s3stash.md5s3stash(self.testfilepath, 'fake-bucket',
                                 conn='FAKE CONN',
-                                auth=('username', 'password'))
+                                url_auth=('username', 'password'))
         mock_urlopen.assert_called_once_with(
           '/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png',
           ('username', 'password'))
@@ -164,6 +160,18 @@ class md5s3stash_TestCase(unittest.TestCase):
         self.assertEqual(report.s3_url,
             's3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da')
 
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_md5s3stash_trailing_slash_url(self, mock_s3move, mock_urlopen):
+        '''The Nuxeo urls end with a slash.
+        The use of os.path.basename doesn't work as it returns a blank str ''.
+        Need to switch to use of NamedTemporaryFile with delete=False to handle
+        all cases.
+        '''
+        mock_urlopen.return_value = FakeReq('test resp')
+        report = md5s3stash.md5s3stash('https://example.com/endinslash/', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_auth=('username', 'password'))
 
 if __name__=='__main__':
     unittest.main()
