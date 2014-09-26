@@ -25,7 +25,7 @@ class CheckChunksTestCase(unittest.TestCase):
     '''
     def setUp(self):
         super(CheckChunksTestCase, self).setUp()
-        self.testFilePath = os.path.join(DIR_FIXTURES, '1x1.png')
+        self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
         self.tdir = None
 
     def tearDown(self):
@@ -35,7 +35,7 @@ class CheckChunksTestCase(unittest.TestCase):
 
     def test_local_file_download(self):
     #return file, temp_path, baseFile, hasher.hexdigest(), mime_type
-        (inputfile, self.tdir, baseFile, md5, mime_type) = md5s3stash.checkChunks(self.testFilePath)
+        (inputfile, self.tdir, baseFile, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath)
         self.assertEqual(baseFile, '1x1.png')
         self.assertEqual(md5, '71a50dbba44c78128b221b7df7bb51f1')
         self.assertEqual(mime_type, 'image/png')
@@ -49,7 +49,7 @@ class CheckChunksTestCase(unittest.TestCase):
     @patch('urllib.urlopen')
     def test_HTTPError(self, mock_urlopen):
         '''Test handling of HTTPError from urllib'''
-        with open(self.testFilePath) as fp:
+        with open(self.testfilepath) as fp:
             side_effect=HTTPError('http://bogus-url', 500, 'test HTTPError',
                 'headers', fp)
         mock_urlopen.side_effect = side_effect
@@ -72,6 +72,33 @@ class CheckChunksTestCase(unittest.TestCase):
         except IOError:
             return True
         self.fail("Didn't raise IOError for file path ./this-path-is-bogus")
+
+
+class URLOpenWithAuthTestCase(unittest.TestCase):
+    '''Test the function of the urlopen_with_auth function.
+    with no auth, defaults to urllib.urlopen
+    '''
+    def setUp(self):
+        super(URLOpenWithAuthTestCase, self).setUp()
+        self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
+
+    def test_urlopen_with_auth_exists(self):
+        req = md5s3stash.urlopen_with_auth(self.testfilepath)
+        req = md5s3stash.urlopen_with_auth(self.testfilepath, auth=None)
+        url_http = 'http://example.edu'
+        self.assertRaises(URLError, md5s3stash.urlopen_with_auth, url_http,
+                                            auth=('user','password'))
+
+    @patch('urllib2.urlopen')
+    def test_urlopen_with_auth(self, mock_urlopen):
+        test_str = 'test resp'
+        mock_urlopen.return_value = StringIO(test_str)
+        url_http = 'https://example.edu'
+        f = md5s3stash.urlopen_with_auth( url_http,
+                                            auth=('user','password'))
+        self.assertEqual(test_str, f.read())
+        #what else can i test?
+
 
 class Md5toURLTestCase(unittest.TestCase):
 

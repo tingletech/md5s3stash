@@ -9,6 +9,8 @@ import argparse
 import tempfile
 import urllib2
 import urllib
+import urlparse
+import base64
 import logging
 import shutil
 import hashlib
@@ -123,6 +125,24 @@ def md5_to_bucket_shard(md5):
     bucket = int_value % len(ALPHABET)
     return basin.encode(ALPHABET, bucket)
 
+def urlopen_with_auth(url, auth=None):
+    '''Use urllib2 to open url if the auth is specified.
+    auth is tuple of (username, password)
+    '''
+    if not auth:
+        return urllib.urlopen(url)  # urllib works with normal file paths
+    else:
+        #make sure https
+        p = urlparse.urlparse(url)
+        if p.scheme != 'https':
+            raise urllib2.URLError('Basic auth not over https is bad idea!')
+        # Need to add header so it gets sent with first request,
+        # else redirected to shib
+        b64authstr=base64.b64encode('{}:{}'.format(*auth))
+        req=urllib2.Request(url)
+        req.add_header('Authorization', 'Basic {}'.format(b64authstr))
+        return urllib2.urlopen(req)
+        
 
 def checkChunks(url):
     """
