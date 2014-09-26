@@ -8,9 +8,12 @@ RUN apt-get install -y python python-dev python-setuptools python-pip
 RUN apt-get install -y python-numpy python-opencv
 RUN apt-get install -y libjpeg-dev libfreetype6-dev zlib1g-dev
 RUN apt-get install -y libwebp-dev liblcms2-dev
-RUN apt-get install -y git
 
-RUN pip install git+git://github.com/tingletech/md5s3stash.git
+ADD requirements.txt .
+ADD thumbnail.py .
+ADD md5s3stash.py .
 
+RUN pip install -r requirements.txt
+ 
 EXPOSE 8888
-CMD ["thumbnail_server"]
+CMD ["python", "thumbnail.py", "--position=face"]
