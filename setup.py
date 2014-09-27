@@ -19,6 +19,13 @@ setup(
     maintainer="Brian Tingle",
     maintainer_email='brian.tingle.cdlib.org@gmail.com',
     packages=find_packages(),
+    #NOTE: 20140926 - the pilbox install failing on travis & new virtualenvs
+    # need to point directly at source pilbox-1.0.3.tar.gz so that
+    # dumb binary pilbox-1.0.3.linux-x86_64.tar.gz is not the file downloaded
+    # setuptools wants source code. Check PyPi to see if fixed...
+    dependency_links = [
+            'https://pypi.python.org/packages/source/p/pilbox/pilbox-1.0.3.tar.gz#md5=514a99f784a4c06242144a005322fe52#egg=pilbox', 
+            ],
     install_requires=['boto', 'basin', 'pilbox'],
     url='https://github.com/tingletech/md5s3stash',
     py_modules=['md5s3stash','thumbnail'],
