@@ -59,7 +59,9 @@ class CheckChunksTestCase(unittest.TestCase):
         '''To see that the checkChunks accepts an auth argument'''
         mock_urlopen.return_value = FakeReq('test resp')
         (self.temp_file, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath, auth=('username','password'))
-        mock_urlopen.assert_called_once_with('/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png', ('username', 'password'))
+        mock_urlopen.assert_called_once_with(
+                                    os.path.join(DIR_FIXTURES, '1x1.png'),
+                                    ('username', 'password'))
         
     @patch('urllib.urlopen')
     def test_HTTPError(self, mock_urlopen):
@@ -151,12 +153,11 @@ class md5s3stash_TestCase(unittest.TestCase):
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
         mock_urlopen.assert_called_once_with(
-          '/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png',
+          os.path.join(DIR_FIXTURES, '1x1.png'),
           ('username', 'password'))
         self.assertEqual(report.mime_type, 'text/html')
         self.assertEqual(report.md5, '85b5a0deaa11f3a5d1762c55701c03da')
-        self.assertEqual(report.url,
-           '/home/mredar/Documents/workspace/ucldc/md5s3stash/fixtures/1x1.png')
+        self.assertEqual(report.url, os.path.join(DIR_FIXTURES, '1x1.png'))
         self.assertEqual(report.s3_url,
             's3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da')
 
