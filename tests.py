@@ -50,7 +50,7 @@ class CheckChunksTestCase(unittest.TestCase):
         self.assertEqual(md5, '71a50dbba44c78128b221b7df7bb51f1')
         self.assertEqual(mime_type, 'image/png')
         #how to check the tmp files?
-        self.assertIn('md5s3', self.temp_file)
+        self.assertTrue('md5s3' in self.temp_file)
         self.assertTrue(os.path.isfile(self.temp_file))
         self.assertEqual(os.stat(self.temp_file).st_size, 95)
 
