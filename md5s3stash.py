@@ -144,12 +144,12 @@ def urlopen_with_auth(url, auth=None):
         p = urlparse.urlparse(url)
         if p.scheme != 'https':
             raise urllib2.URLError('Basic auth not over https is bad idea! \
-                    scheme:{}'.format(p.scheme))
+                    scheme:{0}'.format(p.scheme))
         # Need to add header so it gets sent with first request,
         # else redirected to shib
-        b64authstr=base64.b64encode('{}:{}'.format(*auth))
+        b64authstr=base64.b64encode('{0}:{1}'.format(*auth))
         req=urllib2.Request(url)
-        req.add_header('Authorization', 'Basic {}'.format(b64authstr))
+        req.add_header('Authorization', 'Basic {0}'.format(b64authstr))
         return urllib2.urlopen(req)
         
 
