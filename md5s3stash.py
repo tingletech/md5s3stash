@@ -110,7 +110,7 @@ def md5_to_s3_url(md5, bucket_base):
 
 def md5_to_http_url(md5, bucket_base):
     """ calculate the http URL given an md5 and an bucket_base """
-    return "http://s3.amazonaws.com/{0}.{1}/{2}".format(
+    return "http://{0}.{1}.s3.amazonaws.com/{2}".format(
         md5_to_bucket_shard(md5),
         bucket_base,
         md5
