@@ -1,0 +1,15 @@
+language: python
+python:
+  - "2.7"
+  - "2.6"
+
+env: CODE_DIR=.
+
+# command to install dependencies
+install: 
+  - "python setup.py install"
+  - "pip install -r test-requirements.txt --use-mirrors"
+
+# command to run tests
+script: 
+  - python tests.py

@@ -9,8 +9,10 @@ import argparse
 import tempfile
 import urllib2
 import urllib
+import urlparse
+import base64
+import uuid
 import logging
-import shutil
 import hashlib
 import basin
 import boto
@@ -31,6 +33,10 @@ def main(argv=None):
                         help='show python `DeprecationWarning`s supressed by default',
                         required=False, action='store_true')
     parser.add_argument('--loglevel', default='ERROR', required=False)
+    parser.add_argument('-u', '--username', required=False,
+                        help='username for downloads requiring BasicAuth')
+    parser.add_argument('-p', '--password', required=False,
+                        help='password for downloads requiring BasicAuth')
 
     if argv is None:
         argv = parser.parse_args()
@@ -50,6 +56,9 @@ def main(argv=None):
     if argv.tempdir:
         tempfile.tempdir = argv.tempdir
 
+    auth = None
+    if argv.username:
+        auth = (argv.username, argv.password)
     # set debugging level
     numeric_level = getattr(logging, argv.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
@@ -61,21 +70,22 @@ def main(argv=None):
     conn = boto.connect_s3()
     for url in argv.url:
         print("{0}\t{1}\t{2}\t{3}".format(
-            *md5s3stash(url, bucket_base, conn)
+            *md5s3stash(url, bucket_base, conn, url_auth=auth)
         ))
 
 
-def md5s3stash(url, bucket_base, conn=None):
+def md5s3stash(url, bucket_base, conn=None, url_auth=None):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
+        url_auth is optional Basic auth ('<username>', '<password'>) tuple
+        to use if the url to download requires authentication.
     """
-    (inputfile, tdir, baseFile, md5, mime_type) = checkChunks(url)
+    (file_path, md5, mime_type) = checkChunks(url, url_auth)
     s3_url = md5_to_s3_url(md5, bucket_base)
-    temp_file = os.path.join(tdir, baseFile)
     if conn is None:
         conn = boto.connect_s3()
-    s3move(temp_file, s3_url, mime_type, conn)
-    shutil.rmtree(tdir)
+    s3move(file_path, s3_url, mime_type, conn)
+    os.remove(file_path) #safer than rmtree
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type')
     report = StashReport(url, md5, s3_url, mime_type)
     logging.getLogger('MD5S3:stash').info(report)
@@ -123,8 +133,27 @@ def md5_to_bucket_shard(md5):
     bucket = int_value % len(ALPHABET)
     return basin.encode(ALPHABET, bucket)
 
+def urlopen_with_auth(url, auth=None):
+    '''Use urllib2 to open url if the auth is specified.
+    auth is tuple of (username, password)
+    '''
+    if not auth:
+        return urllib.urlopen(url)  # urllib works with normal file paths
+    else:
+        #make sure https
+        p = urlparse.urlparse(url)
+        if p.scheme != 'https':
+            raise urllib2.URLError('Basic auth not over https is bad idea! \
+                    scheme:{0}'.format(p.scheme))
+        # Need to add header so it gets sent with first request,
+        # else redirected to shib
+        b64authstr=base64.b64encode('{0}:{1}'.format(*auth))
+        req=urllib2.Request(url)
+        req.add_header('Authorization', 'Basic {0}'.format(b64authstr))
+        return urllib2.urlopen(req)
+        
 
-def checkChunks(url):
+def checkChunks(url, auth=None):
     """
        Helper to download large files the only arg is a url this file
        will go to a temp directory the file will also be downloaded in
@@ -133,26 +162,24 @@ def checkChunks(url):
        based on downloadChunks@https://gist.github.com/gourneau/1430932
        and http://www.pythoncentral.io/hashing-files-with-python/
     """
-    baseFile = os.path.basename(url)
-    temp_path = tempfile.mkdtemp(prefix="md5s3_")
-    logging.getLogger('MD5S3').info("temp path %s" % temp_path)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, prefix='md5s3_')
+    logging.getLogger('MD5S3').info("temp file path %s" % temp_file.name)
 
     hasher = hashlib.new('md5')
     BLOCKSIZE = 1024 * hasher.block_size
 
     try:
-        file = os.path.join(temp_path, baseFile)
-        req = urllib.urlopen(url)  # urllib works with normal file paths
+        req = urlopen_with_auth(url, auth)  # urllib works with normal file paths
         mime_type = req.info()['Content-type']
         downloaded = 0
-        with open(file, 'wb') as fp:
+        with temp_file:
             while True:
                 chunk = req.read(BLOCKSIZE)
                 hasher.update(chunk)
                 downloaded += len(chunk)
                 if not chunk:
                     break
-                fp.write(chunk)
+                temp_file.write(chunk)
     except urllib2.HTTPError, e:
         print "HTTP Error:", e.code, url
         return False
@@ -160,7 +187,7 @@ def checkChunks(url):
         print "URL Error:", e.reason, url
         return False
 
-    return file, temp_path, baseFile, hasher.hexdigest(), mime_type
+    return temp_file.name, hasher.hexdigest(), mime_type
 
 
 def s3move(place1, place2, mime, s3):
