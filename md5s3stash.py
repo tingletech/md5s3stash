@@ -11,12 +11,10 @@ import urllib2
 import urllib
 import urlparse
 import base64
-import uuid
 import logging
 import hashlib
 import basin
 import boto
-import urlparse
 from collections import namedtuple
 
 
@@ -27,11 +25,18 @@ def main(argv=None):
                         help='URL or path of source file to stash')
     parser.add_argument('-b', '--bucket_base', nargs="?",
                         help='this must be a unique name in all of AWS S3')
-    parser.add_argument('-t', '--tempdir', required=False,
-                        help="if your files might be large, make sure this is on a big disk")
-    parser.add_argument('-w', '--warnings', default=False,
-                        help='show python `DeprecationWarning`s supressed by default',
-                        required=False, action='store_true')
+    parser.add_argument(
+        '-t', '--tempdir',
+        required=False,
+        help="if your files might be large, make sure this is on a big disk"
+    )
+    parser.add_argument(
+        '-w', '--warnings',
+        default=False,
+        help='show python `DeprecationWarning`s supressed by default',
+        required=False,
+        action='store_true',
+    )
     parser.add_argument('--loglevel', default='ERROR', required=False)
     parser.add_argument('-u', '--username', required=False,
                         help='username for downloads requiring BasicAuth')
@@ -85,7 +90,7 @@ def md5s3stash(url, bucket_base, conn=None, url_auth=None):
     if conn is None:
         conn = boto.connect_s3()
     s3move(file_path, s3_url, mime_type, conn)
-    os.remove(file_path) #safer than rmtree
+    os.remove(file_path)  # safer than rmtree
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type')
     report = StashReport(url, md5, s3_url, mime_type)
     logging.getLogger('MD5S3:stash').info(report)
@@ -120,7 +125,7 @@ def md5_to_bucket_shard(md5):
     # GET requests, the more impact this will likely have."
     #  -- http://aws.amazon.com/articles/1904
     # "Bucket names must be a series of one or more labels. Adjacent
-    # labels are separated by a single period (.). [...] Each label must 
+    # labels are separated by a single period (.). [...] Each label must
     # start and end with a lowercase letter or a number. "
     #  -- http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
     # see also:  http://en.wikipedia.org/wiki/Base_36
@@ -133,6 +138,7 @@ def md5_to_bucket_shard(md5):
     bucket = int_value % len(ALPHABET)
     return basin.encode(ALPHABET, bucket)
 
+
 def urlopen_with_auth(url, auth=None):
     '''Use urllib2 to open url if the auth is specified.
     auth is tuple of (username, password)
@@ -140,18 +146,18 @@ def urlopen_with_auth(url, auth=None):
     if not auth:
         return urllib.urlopen(url)  # urllib works with normal file paths
     else:
-        #make sure https
+        # make sure https
         p = urlparse.urlparse(url)
         if p.scheme != 'https':
             raise urllib2.URLError('Basic auth not over https is bad idea! \
                     scheme:{0}'.format(p.scheme))
         # Need to add header so it gets sent with first request,
         # else redirected to shib
-        b64authstr=base64.b64encode('{0}:{1}'.format(*auth))
-        req=urllib2.Request(url)
+        b64authstr = base64.b64encode('{0}:{1}'.format(*auth))
+        req = urllib2.Request(url)
         req.add_header('Authorization', 'Basic {0}'.format(b64authstr))
         return urllib2.urlopen(req)
-        
+
 
 def checkChunks(url, auth=None):
     """
@@ -169,7 +175,8 @@ def checkChunks(url, auth=None):
     BLOCKSIZE = 1024 * hasher.block_size
 
     try:
-        req = urlopen_with_auth(url, auth)  # urllib works with normal file paths
+        # urllib works with normal file paths
+        req = urlopen_with_auth(url, auth)
         mime_type = req.info()['Content-type']
         downloaded = 0
         with temp_file:

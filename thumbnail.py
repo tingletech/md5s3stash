@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-""" thumbnail server for md5s3stash 
+""" thumbnail server for md5s3stash
 extension to pilbox server http://agschwender.github.io/pilbox/#extension
 """
 import tornado.gen
 from pilbox.app import PilboxApplication, ImageHandler, main
 from md5s3stash import md5_to_http_url
-import boto
 import os
 
 
@@ -24,7 +23,7 @@ class ThumbnailImageHandler(ImageHandler):
 
     @tornado.gen.coroutine
     def get(self, mode, w, h, md5):
-        
+
         url = md5_to_http_url(md5, os.environ['BUCKET_BASE'])
         self.args.update(dict(w=w, h=h, url=url))
 
