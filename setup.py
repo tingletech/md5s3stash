@@ -34,5 +34,6 @@ setup(
             'md5s3stash = md5s3stash:main',
         ]
     },
-    # test_suite='test',
+    test_suite='tests',
+    tests_require=['mock',],
 )

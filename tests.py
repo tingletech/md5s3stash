@@ -130,7 +130,7 @@ class Md5toURLTestCase(unittest.TestCase):
 
     def test_md5_to_http_url(self):
         self.assertEqual(md5s3stash.md5_to_http_url(self.md5, self.bucket_base),
-                        'http://s3.amazonaws.com/1.test/d68e763c825dc0e388929ae1b375ce18'
+                        'http://1.test.s3.amazonaws.com/d68e763c825dc0e388929ae1b375ce18'
                         )
 
     def test_md5_to_bucket_shard(self):
