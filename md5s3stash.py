@@ -216,8 +216,10 @@ def s3move(place1, place2, mime, s3):
         l.debug('bucket created')
     if not(bucket.get_key(parts.path)):
         key = bucket.new_key(parts.path)
-        key.set_contents_from_filename(place1)
+        # metadata has to be set before setting contents/creating object. 
+        # See https://gist.github.com/garnaat/1791086
         key.set_metadata("Content-Type", mime)
+        key.set_contents_from_filename(place1)
         # key.set_acl('public-read')
         l.debug('file sent to s3')
     else:
