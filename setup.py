@@ -10,7 +10,7 @@ setup(
     name='md5s3stash',
     description='content addressable storage in AWS S3',
     long_description=read('README.md'),
-    version='0.2.1',
+    version='0.2.2',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
