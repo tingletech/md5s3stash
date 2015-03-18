@@ -47,7 +47,7 @@ def main(argv=None):
         argv = parser.parse_args()
 
     if argv.bucket_base:
-        bucket_base = argv.bucket_base[0]
+        bucket_base = argv.bucket_base
     else:
         assert 'BUCKET_BASE' in os.environ, "`-b` or `BUCKET_BASE` must be set"
         bucket_base = os.environ['BUCKET_BASE']
