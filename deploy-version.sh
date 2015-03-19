@@ -13,12 +13,14 @@ set -u
 ZIP=thumbnail-ebs.zip
 DIR=thumbnail-beanstalk
 BUCKET=xtf.dsc.cdlib.org
+REGION=us-west-2
+APPNAME=thumbnails-west
 
 zip $ZIP Dockerfile requirements.txt thumbnail.py md5s3stash.py
 aws s3 cp $ZIP s3://$BUCKET/$DIR/$ZIP
 aws elasticbeanstalk create-application-version \
-  --application-name ucldc-thumbnail \
-  --region us-east-1 \
+  --application-name $APPNAME \
+  --region $REGION \
   --source-bundle S3Bucket=$BUCKET,S3Key=$DIR/$ZIP \
   --version-label "$1"
 
