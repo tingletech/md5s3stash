@@ -155,7 +155,7 @@ class md5s3stash_TestCase(unittest.TestCase):
         mock_urlopen.assert_called_once_with(
           os.path.join(DIR_FIXTURES, '1x1.png'),
           ('username', 'password'))
-        self.assertEqual(report.mime_type, 'text/html')
+        self.assertEqual(report.mime_type, None)  # mock's file is not an image
         self.assertEqual(report.md5, '85b5a0deaa11f3a5d1762c55701c03da')
         self.assertEqual(report.url, os.path.join(DIR_FIXTURES, '1x1.png'))
         self.assertEqual(report.s3_url,
@@ -173,6 +173,25 @@ class md5s3stash_TestCase(unittest.TestCase):
         report = md5s3stash.md5s3stash('https://example.com/endinslash/', 'fake-bucket',
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
+
+
+class ImageInfoTestCase(unittest.TestCase):
+    def setUp(self):
+        super(ImageInfoTestCase, self).setUp()
+        self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
+        self.testemptypath = os.path.join(DIR_FIXTURES, 'empty')
+
+    def test_image_info(self):
+        self.assertEqual(
+            md5s3stash.image_info(self.testfilepath),
+            ('image/png', (1, 1))
+        )
+        self.assertEqual(
+            md5s3stash.image_info(self.testemptypath),
+            (None, (0, 0))
+        )
+        self.assertRaises(IOError, md5s3stash.image_info, '')
+
 
 if __name__=='__main__':
     unittest.main()

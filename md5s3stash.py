@@ -15,6 +15,8 @@ import logging
 import hashlib
 import basin
 import boto
+import magic
+from PIL import Image
 from collections import namedtuple
 
 
@@ -90,9 +92,10 @@ def md5s3stash(url, bucket_base, conn=None, url_auth=None):
     if conn is None:
         conn = boto.connect_s3()
     s3move(file_path, s3_url, mime_type, conn)
+    (mime, dimensions) = image_info(file_path)
     os.remove(file_path)  # safer than rmtree
-    StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type')
-    report = StashReport(url, md5, s3_url, mime_type)
+    StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
+    report = StashReport(url, md5, s3_url, mime, dimensions)
     logging.getLogger('MD5S3:stash').info(report)
     return report
 
@@ -226,13 +229,33 @@ def s3move(place1, place2, mime, s3):
         l.info('key existed already')
 
 
+def image_info(filepath):
+    ''' get image info
+        `filepath` path to a file
+        returns
+          a tuple of two values
+            1. mime/type if an image; otherwise None
+            2. a tuple of (height, width) if an image; otherwise (0,0)
+    '''
+    try:
+        return (
+            magic.Magic(mime=True).from_file(filepath),
+            Image.open(filepath).size
+        )
+    except IOError as e:
+        if not e.message.startswith('cannot identify image file'):
+            raise e
+        else:
+            return (None, (0,0))
+
+
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
 
 
 """
-Copyright (c) 2014, Regents of the University of California
+Copyright (c) 2015, Regents of the University of California
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
