@@ -18,6 +18,7 @@ import boto
 import magic
 from PIL import Image
 from collections import namedtuple
+from pprint import pprint as pp
 
 
 def main(argv=None):
@@ -81,20 +82,35 @@ def main(argv=None):
         ))
 
 
-def md5s3stash(url, bucket_base, conn=None, url_auth=None):
+def md5s3stash(
+        url,
+        bucket_base,
+        conn=None,
+        url_auth=None,
+        url_cache={},
+        hash_cache={}
+    ):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
         url_auth is optional Basic auth ('<username>', '<password'>) tuple
         to use if the url to download requires authentication.
+
+        hash_cache[md5] = [ url, md5, s3_url, mime_type, dimensions ]
+   
     """
-    (file_path, md5, mime_type) = checkChunks(url, url_auth)
+    StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
+    (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
+    try:
+        # return StashReport(url, md5, s3_url, mime, dimensions)
+        return StashReport(hash_cache[md5])
+    except KeyError:
+        pass
     s3_url = md5_to_s3_url(md5, bucket_base)
     if conn is None:
         conn = boto.connect_s3()
     s3move(file_path, s3_url, mime_type, conn)
     (mime, dimensions) = image_info(file_path)
     os.remove(file_path)  # safer than rmtree
-    StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
     report = StashReport(url, md5, s3_url, mime, dimensions)
     logging.getLogger('MD5S3:stash').info(report)
     return report
@@ -142,27 +158,41 @@ def md5_to_bucket_shard(md5):
     return basin.encode(ALPHABET, bucket)
 
 
-def urlopen_with_auth(url, auth=None):
+def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
     auth is tuple of (username, password)
     '''
+    opener = urllib2.build_opener(DefaultErrorHandler())
+    req = urllib2.Request(url)
+    p = urlparse.urlparse(url)
+
+    # try to set headers for conditional get request
+    try:
+        req.add_header(
+            cache[url]['If_None_Match'],
+            cache[url]['If_Last_Modified']
+        )
+    except KeyError:
+        pass
+
     if not auth:
-        return urllib.urlopen(url)  # urllib works with normal file paths
+        if p.scheme not in ['http', 'https']:
+            return urllib.urlopen(url) # urllib works with normal file paths
     else:
         # make sure https
-        p = urlparse.urlparse(url)
         if p.scheme != 'https':
             raise urllib2.URLError('Basic auth not over https is bad idea! \
                     scheme:{0}'.format(p.scheme))
         # Need to add header so it gets sent with first request,
         # else redirected to shib
         b64authstr = base64.b64encode('{0}:{1}'.format(*auth))
-        req = urllib2.Request(url)
         req.add_header('Authorization', 'Basic {0}'.format(b64authstr))
-        return urllib2.urlopen(req)
+
+    # return urllib2.urlopen(req)
+    return opener.open(req)
 
 
-def checkChunks(url, auth=None):
+def checkChunks(url, auth=None, cache={}):
     """
        Helper to download large files the only arg is a url this file
        will go to a temp directory the file will also be downloaded in
@@ -178,9 +208,15 @@ def checkChunks(url, auth=None):
     BLOCKSIZE = 1024 * hasher.block_size
 
     try:
-        # urllib works with normal file paths
-        req = urlopen_with_auth(url, auth)
+        req = urlopen_with_auth(url, auth=auth, cache=cache)
+        thisurl = cache.get('url', dict())
+        if req.getcode() == 304:
+            return None, thisurl['md5'], None
         mime_type = req.info()['Content-type']
+        # record these headers, they will let us pretend like we are a cacheing
+        # proxy server, and send conditional GETs next time we see this file
+        thisurl['If_None_Match'] = req.info().get('ETag', None);
+        thisurl['If_Last_Modified'] = req.info().get('Last-Modified', None);
         downloaded = 0
         with temp_file:
             while True:
@@ -197,7 +233,9 @@ def checkChunks(url, auth=None):
         print "URL Error:", e.reason, url
         return False
 
-    return temp_file.name, hasher.hexdigest(), mime_type
+    md5 = hasher.hexdigest()
+    thisurl['md5'] = md5
+    return temp_file.name, md5, mime_type
 
 
 def s3move(place1, place2, mime, s3):
@@ -247,6 +285,16 @@ def image_info(filepath):
             raise e
         else:
             return (None, (0,0))
+
+
+# example 11.7 Defining URL handlers
+# http://www.diveintopython.net/http_web_services/etags.html
+class DefaultErrorHandler(urllib2.HTTPDefaultErrorHandler):
+    def http_error_default(self, req, fp, code, msg, headers):
+        result = urllib2.HTTPError(
+            req.get_full_url(), code, msg, headers, fp)
+        result.status = code
+        return result
 
 
 # main() idiom for importing into REPL for debugging
