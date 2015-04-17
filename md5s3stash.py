@@ -102,7 +102,7 @@ def md5s3stash(
     (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
     try:
         # return StashReport(url, md5, s3_url, mime, dimensions)
-        return StashReport(hash_cache[md5])
+        return StashReport(*hash_cache[md5])
     except KeyError:
         pass
     s3_url = md5_to_s3_url(md5, bucket_base)
@@ -209,14 +209,18 @@ def checkChunks(url, auth=None, cache={}):
 
     try:
         req = urlopen_with_auth(url, auth=auth, cache=cache)
-        thisurl = cache.get('url', dict())
+        thisurl = cache.get(url, dict())
         if req.getcode() == 304:
             return None, thisurl['md5'], None
         mime_type = req.info()['Content-type']
         # record these headers, they will let us pretend like we are a cacheing
         # proxy server, and send conditional GETs next time we see this file
-        thisurl['If_None_Match'] = req.info().get('ETag', None);
-        thisurl['If_Last_Modified'] = req.info().get('Last-Modified', None);
+        etag = req.info().get('ETag', None);
+        if etag:
+            thisurl['If_None_Match'] = etag
+        lmod = req.info().get('Last-Modified', None);
+        if lmod:
+            thisurl['If_Last_Modified'] = lmod
         downloaded = 0
         with temp_file:
             while True:
@@ -235,6 +239,7 @@ def checkChunks(url, auth=None, cache={}):
 
     md5 = hasher.hexdigest()
     thisurl['md5'] = md5
+    cache[url] = thisurl
     return temp_file.name, md5, mime_type
 
 
