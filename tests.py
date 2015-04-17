@@ -8,7 +8,6 @@ from mock import patch
 import md5s3stash
 import urllib2
 from collections import namedtuple
-from pprint import pprint as pp
 from wsgiref.handlers import format_date_time
 from datetime import datetime
 from time import mktime

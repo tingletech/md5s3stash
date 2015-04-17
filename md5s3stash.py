@@ -18,7 +18,6 @@ import boto
 import magic
 from PIL import Image
 from collections import namedtuple
-from pprint import pprint as pp
 
 
 def main(argv=None):
@@ -169,10 +168,15 @@ def urlopen_with_auth(url, auth=None, cache={}):
 
     # try to set headers for conditional get request
     try:
-        req.add_header(
-            cache[url]['If_None_Match'],
-            cache[url]['If_Last_Modified']
-        )
+        here = cache[url]
+        if 'If_None_Match' in here:
+            req.add_header(
+                cache[url]['If_None_Match'],
+            )
+        if 'If_Last_Modified' in here:
+            req.add_header(
+                cache[url]['If_Last_Modified']
+            )
     except KeyError:
         pass
 
