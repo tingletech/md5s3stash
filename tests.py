@@ -177,7 +177,7 @@ class CacheTestCase(unittest.TestCase):
         self.url_cache = {}
         self.hash_cache = {
             '85b5a0deaa11f3a5d1762c55701c03da': (
-                'url', 'md5', 's3_url', 'mime_type', 'dimensions'
+                's3_url', 'mime_type', (100, 100)
             )
         }
         self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
@@ -202,8 +202,18 @@ class CacheTestCase(unittest.TestCase):
         self.assertEqual(
             report,
             StashReport(
-                url='url', md5='md5', s3_url='s3_url', mime_type='mime_type', dimensions='dimensions'
+                url='http://example.edu/',
+                md5='85b5a0deaa11f3a5d1762c55701c03da',
+                s3_url='s3_url',
+                mime_type='mime_type',
+                dimensions=(100, 100)
             )
+        )
+        self.assertEqual(
+            self.hash_cache,
+            {'85b5a0deaa11f3a5d1762c55701c03da': ('s3_url',
+                                      'mime_type',
+                                      (100, 100))}
         )
         mock_urlopen.reset_mock()
 
@@ -253,10 +263,12 @@ class md5s3stash_TestCase(unittest.TestCase):
         report = md5s3stash.md5s3stash(self.testfilepath, 'fake-bucket',
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
+        pp(report)
         mock_urlopen.assert_called_once_with(
           os.path.join(DIR_FIXTURES, '1x1.png'),
           auth=('username', 'password'), cache={'/Users/tingle/code/md5s3stash/fixtures/1x1.png': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, 'https://example.com/endinslash/': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
-        mock_urlopen.reset_mock()
+        #mock_urlopen.reset_mock()
+
         self.assertEqual(report.mime_type, None)  # mock's file is not an image
         self.assertEqual(report.md5, '85b5a0deaa11f3a5d1762c55701c03da')
         self.assertEqual(report.url, os.path.join(DIR_FIXTURES, '1x1.png'))

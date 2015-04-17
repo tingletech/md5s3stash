@@ -95,14 +95,14 @@ def md5s3stash(
         url_auth is optional Basic auth ('<username>', '<password'>) tuple
         to use if the url to download requires authentication.
 
-        hash_cache[md5] = [ url, md5, s3_url, mime_type, dimensions ]
+        hash_cache[md5] = ( url, md5, s3_url, mime_type, dimensions )
    
     """
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
     (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
     try:
         # return StashReport(url, md5, s3_url, mime, dimensions)
-        return StashReport(*hash_cache[md5])
+        return StashReport(url, md5, *hash_cache[md5])
     except KeyError:
         pass
     s3_url = md5_to_s3_url(md5, bucket_base)
@@ -111,7 +111,8 @@ def md5s3stash(
     s3move(file_path, s3_url, mime_type, conn)
     (mime, dimensions) = image_info(file_path)
     os.remove(file_path)  # safer than rmtree
-    report = StashReport(url, md5, s3_url, mime, dimensions)
+    hash_cache[md5] = (s3_url, mime, dimensions)
+    report = StashReport(url, md5, *hash_cache[md5])
     logging.getLogger('MD5S3:stash').info(report)
     return report
 
