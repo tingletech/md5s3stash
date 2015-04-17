@@ -263,10 +263,13 @@ class md5s3stash_TestCase(unittest.TestCase):
         report = md5s3stash.md5s3stash(self.testfilepath, 'fake-bucket',
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
-        pp(report)
+        tdict = {
+            '/Users/tingle/code/md5s3stash/fixtures/1x1.png': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'},
+            'https://example.com/endinslash/': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, }
+
         mock_urlopen.assert_called_once_with(
           os.path.join(DIR_FIXTURES, '1x1.png'),
-          auth=('username', 'password'), cache={'/Users/tingle/code/md5s3stash/fixtures/1x1.png': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, 'https://example.com/endinslash/': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
+          auth=('username', 'password'), cache=tdict,)
         #mock_urlopen.reset_mock()
 
         self.assertEqual(report.mime_type, None)  # mock's file is not an image
