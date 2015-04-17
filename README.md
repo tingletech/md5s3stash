@@ -1,6 +1,8 @@
 md5s3stash
 ==========
 
+![build status](https://travis-ci.org/ucldc/md5s3stash.svg)
+
 content addressable storage in AWS S3
 
 ```
