@@ -169,14 +169,10 @@ def urlopen_with_auth(url, auth=None, cache={}):
     # try to set headers for conditional get request
     try:
         here = cache[url]
-        if 'If_None_Match' in here:
-            req.add_header(
-                cache[url]['If_None_Match'],
-            )
-        if 'If_Last_Modified' in here:
-            req.add_header(
-                cache[url]['If_Last_Modified']
-            )
+        if 'If-None-Match' in here:
+            req.add_header('If-None-Match', cache[url]['If-None-Match'],)
+        if 'If-Modified-Since' in here:
+            req.add_header('If-Modified-Since', cache[url]['If-Modified-Since'],)
     except KeyError:
         pass
 
@@ -222,10 +218,10 @@ def checkChunks(url, auth=None, cache={}):
         # proxy server, and send conditional GETs next time we see this file
         etag = req.info().get('ETag', None);
         if etag:
-            thisurl['If_None_Match'] = etag
+            thisurl['If-None-Match'] = etag
         lmod = req.info().get('Last-Modified', None);
         if lmod:
-            thisurl['If_Last_Modified'] = lmod
+            thisurl['If-Modified-Since'] = lmod
         downloaded = 0
         with temp_file:
             while True:
@@ -300,7 +296,7 @@ def image_info(filepath):
 # example 11.7 Defining URL handlers
 # http://www.diveintopython.net/http_web_services/etags.html
 class DefaultErrorHandler(urllib2.HTTPDefaultErrorHandler):
-    def http_error_default(self, req, fp, code, msg, headers):
+    def http_error_304(self, req, fp, code, msg, headers):
         result = urllib2.HTTPError(
             req.get_full_url(), code, msg, headers, fp)
         result.status = code
