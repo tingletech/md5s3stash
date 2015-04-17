@@ -104,7 +104,7 @@ class CheckChunksTestCase(unittest.TestCase):
         mock_urlopen.assert_called_once_with(
                                     file,
                                     auth=('username', 'password'), 
-                                    cache={'/Users/tingle/code/md5s3stash/fixtures/1x1.png': {u'If_None_Match': "you're it", u'If_Last_Modified': lmod , u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
+                                    cache={self.testfilepath: {u'If_None_Match': "you're it", u'If_Last_Modified': lmod , u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
         
     @patch('urllib.urlopen')
     def test_HTTPError(self, mock_urlopen):
@@ -264,7 +264,7 @@ class md5s3stash_TestCase(unittest.TestCase):
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
         tdict = {
-            '/Users/tingle/code/md5s3stash/fixtures/1x1.png': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'},
+            self.testfilepath : {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'},
             'https://example.com/endinslash/': {u'If_None_Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, }
 
         mock_urlopen.assert_called_once_with(
