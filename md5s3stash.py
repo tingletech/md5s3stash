@@ -91,16 +91,16 @@ def md5s3stash(
     ):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
-        url_auth is optional Basic auth ('<username>', '<password'>) tuple
+        `url_auth` is optional Basic auth ('<username>', '<password'>) tuple
         to use if the url to download requires authentication.
-
-        hash_cache[md5] = ( url, md5, s3_url, mime_type, dimensions )
-   
+        `url_cache` is an object with a dict interface, keyed on url
+            url_cache[url] = { md5: ..., If-None-Match: etag, If-Modified-Since: date }
+        `hash_cache` is an obhect with dict interface, keyed on md5
+            hash_cache[md5] = ( s3_url, mime_type, dimensions )
     """
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
     (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
     try:
-        # return StashReport(url, md5, s3_url, mime, dimensions)
         return StashReport(url, md5, *hash_cache[md5])
     except KeyError:
         pass
