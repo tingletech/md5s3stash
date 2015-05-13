@@ -10,7 +10,7 @@ setup(
     name='md5s3stash',
     description='content addressable storage in AWS S3',
     long_description=read('README.md'),
-    version='0.2.1',
+    version='0.2.4',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -26,7 +26,7 @@ setup(
     dependency_links = [
             'https://pypi.python.org/packages/source/p/pilbox/pilbox-1.0.3.tar.gz#md5=514a99f784a4c06242144a005322fe52#egg=pilbox', 
             ],
-    install_requires=['boto', 'basin', 'pilbox'],
+    install_requires=['boto', 'basin', 'pilbox', 'python-magic'],
     url='https://github.com/tingletech/md5s3stash',
     py_modules=['md5s3stash','thumbnail'],
     entry_points={
