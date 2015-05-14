@@ -132,3 +132,7 @@ The test code has an example of using redis-collections as the caching dictionar
 
 To run a test of redis integration with the caching mechanism, set the environment variable LIVE_REDIS_TEST and have a redis server running locally.
 
+Local redis with docker:
+
+docker pull redis
+docker run -p 6379:6379 --name md5-test -d redis
