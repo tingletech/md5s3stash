@@ -25,6 +25,7 @@ setup(
     # setuptools wants source code. Check PyPi to see if fixed...
     dependency_links = [
             'https://pypi.python.org/packages/source/p/pilbox/pilbox-1.0.3.tar.gz#md5=514a99f784a4c06242144a005322fe52#egg=pilbox', 
+            'https://github.com/mredar/redis-collections/archive/master.zip#egg=redis-collections',
             ],
     install_requires=['boto', 'basin', 'pilbox', 'python-magic'],
     url='https://github.com/tingletech/md5s3stash',
@@ -35,5 +36,5 @@ setup(
         ]
     },
     test_suite='tests',
-    tests_require=['mock',],
+    tests_require=['mock', 'unittest2', 'redis_collections', 'HTTPretty']
 )

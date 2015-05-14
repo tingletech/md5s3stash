@@ -121,3 +121,14 @@ site-packages/tornado/log.py options:
 The `bucket_base` parameter, command line arguments `-b` and `--bucket_base`, and environmental variable `BUCKET_BASE`
 must be unique name in all of AWS S3.  The IAM role or user will need to be able to create/write/read to 36 buckets
 (`0-9a-z.BUCKET_BASE`).
+
+## Development
+
+md5s3stash has been tested on python 2.6 & 2.7.
+
+python setup.py test
+
+The test code has an example of using redis-collections as the caching dictionary.
+
+To run a test of redis integration with the caching mechanism, set the environment variable LIVE_REDIS_TEST and have a redis server running locally.
+
