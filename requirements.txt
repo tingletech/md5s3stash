@@ -1,4 +1,4 @@
 basin==0.1
 boto==2.30.0
-pilbox==1.0.3
+https://pypi.python.org/packages/source/p/pilbox/pilbox-1.0.3.tar.gz#md5=514a99f784a4c06242144a005322fe52#egg=pilbox
 python-magic==0.4.6
