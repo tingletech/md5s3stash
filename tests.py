@@ -1,5 +1,4 @@
 import os, sys
-import unittest
 import shutil # for cleanup
 from cStringIO import StringIO
 from contextlib import contextmanager
@@ -11,6 +10,13 @@ from collections import namedtuple
 from wsgiref.handlers import format_date_time
 from datetime import datetime
 from time import mktime
+
+import unittest
+if not hasattr(unittest, 'skip'):
+    import unittest2 as unittest
+
+import httpretty
+import redis_collections
 
 DIR_THIS_FILE = os.path.abspath(os.path.split(__file__)[0])
 DIR_FIXTURES = os.path.join(DIR_THIS_FILE, 'fixtures')
@@ -173,7 +179,10 @@ class URLOpenWithAuthTestCase(unittest.TestCase):
 class CacheTestCase(unittest.TestCase):
     def setUp(self):
         super(CacheTestCase, self).setUp()
-        self.url_cache = {}
+        self.url_cache = {'https://example.edu':
+                    {'If-None-Match': 'nice etag',
+                     'If-Modified-Since': 'since test val'}
+                }
         self.hash_cache = {
             '85b5a0deaa11f3a5d1762c55701c03da': (
                 's3_url', 'mime_type', (100, 100)
@@ -216,11 +225,107 @@ class CacheTestCase(unittest.TestCase):
         )
         mock_urlopen.reset_mock()
 
+    @patch('md5s3stash.s3move')
+    def test_url_cache(
+        self,
+        mock_s3move
+    ):
+        httpretty.enable()
+        httpretty.register_uri(httpretty.GET, 'https://example.edu',
+                status=200,
+                content_type='mime_type',
+                body='test body'
+                )
+        report = md5s3stash.md5s3stash('https://example.edu', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        request_headers = httpretty.last_request().headers
+        self.assertEqual(request_headers['If-None-Match'], 'nice etag')
+        self.assertEqual(request_headers['If-Modified-Since'],
+                'since test val')
+
     #urolopen_with_auth
 
     #@patch('md5s3stash.urlopen_with_auth')
     #def test_conditional_get_cache(self, mock_urlopen):
         #mock_urlopen.return_value = FakeReq('test resp', 304)
+
+
+@unittest.skipUnless(os.environ.get('LIVE_REDIS_TEST', False),
+        'No Redis available for testing purposes')
+class LiveCacheTestCase(unittest.TestCase):
+    def setUp(self):
+        #get redis connection
+        #TODO: able to override with env vars
+        self.url_cache = redis_collections.Dict(
+                key='test-url-cache-key-delete-me')
+        self.hash_cache = redis_collections.Dict(
+                key='test-hash-cache-key-delete-me')
+        self.url_cache['https://example.edu'] = {
+                'If-None-Match': 'nice etag',
+                'If-Modified-Since': 'since test val'}
+
+    def tearDown(self):
+        #Delete the keys for the caches
+        self.url_cache.clear()
+        self.hash_cache.clear()
+
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_redis_cache_save(self, mock_s3move, mock_urlopen):
+        mock_urlopen.return_value = FakeReq('test resp')
+        report = md5s3stash.md5s3stash('https://example.com/endinslash/', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_auth=('username', 'password'),
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        self.assertEqual(self.url_cache['https://example.com/endinslash/'],
+                {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'})
+        self.assertEqual(self.hash_cache['85b5a0deaa11f3a5d1762c55701c03da'],
+                    ('s3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da',
+                        None,
+                        (0, 0))
+                )
+
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_redis_hash_cache_retrieve(self, mock_s3move, mock_urlopen):
+        mock_urlopen.return_value = FakeReq('test resp')
+        self.hash_cache['85b5a0deaa11f3a5d1762c55701c03da'] = (
+                's3_url', 'mime_type', (100, 100))
+        report = md5s3stash.md5s3stash('http://example.edu/', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
+        self.assertEqual(
+            report,
+            StashReport(
+                url='http://example.edu/',
+                md5='85b5a0deaa11f3a5d1762c55701c03da',
+                s3_url='s3_url',
+                mime_type='mime_type',
+                dimensions=(100, 100)
+            )
+        )
+
+    @patch('md5s3stash.s3move')
+    def test_redis_url_cache_retrieve(self, mock_s3move):
+        httpretty.enable()
+        httpretty.register_uri(httpretty.GET, 'https://example.edu',
+                status=200,
+                content_type='mime_type',
+                body='test body'
+                )
+        report = md5s3stash.md5s3stash('https://example.edu', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        request_headers = httpretty.last_request().headers
+        self.assertEqual(request_headers['If-None-Match'], 'nice etag')
+        self.assertEqual(request_headers['If-Modified-Since'],
+                'since test val')
 
 
 class Md5toURLTestCase(unittest.TestCase):
