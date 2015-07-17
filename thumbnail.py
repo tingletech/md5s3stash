@@ -27,9 +27,8 @@ class ThumbnailImageHandler(ImageHandler):
     @tornado.gen.coroutine
     def get(self, mode, w, h, md5='0d6cc125540194549459df758af868a8'):
         url = md5_to_http_url(md5, os.environ['BUCKET_BASE'])
-        self.args.update(dict(w=w, h=h, url=url))
+        self.args.update(dict(w=w, h=h, url=url, mode=mode))
         self.validate_request()
-        self.settings['mode'] = mode
         resp = yield self.fetch_image()
         self.render_image(resp)
 

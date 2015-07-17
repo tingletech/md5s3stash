@@ -10,7 +10,7 @@ setup(
     name='md5s3stash',
     description='content addressable storage in AWS S3',
     long_description=read('README.md'),
-    version='0.2.3',
+    version='0.3.0',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -25,8 +25,9 @@ setup(
     # setuptools wants source code. Check PyPi to see if fixed...
     dependency_links = [
             'https://pypi.python.org/packages/source/p/pilbox/pilbox-1.0.3.tar.gz#md5=514a99f784a4c06242144a005322fe52#egg=pilbox', 
+            'https://github.com/mredar/redis-collections/archive/master.zip#egg=redis-collections',
             ],
-    install_requires=['boto', 'basin', 'pilbox'],
+    install_requires=['boto', 'basin', 'pilbox', 'python-magic'],
     url='https://github.com/tingletech/md5s3stash',
     py_modules=['md5s3stash','thumbnail'],
     entry_points={
@@ -35,5 +36,5 @@ setup(
         ]
     },
     test_suite='tests',
-    tests_require=['mock',],
+    tests_require=['mock', 'unittest2', 'redis_collections', 'HTTPretty']
 )

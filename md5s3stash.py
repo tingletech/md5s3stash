@@ -15,6 +15,8 @@ import logging
 import hashlib
 import basin
 import boto
+import magic
+from PIL import Image
 from collections import namedtuple
 
 
@@ -79,20 +81,37 @@ def main(argv=None):
         ))
 
 
-def md5s3stash(url, bucket_base, conn=None, url_auth=None):
+def md5s3stash(
+        url,
+        bucket_base,
+        conn=None,
+        url_auth=None,
+        url_cache={},
+        hash_cache={}
+    ):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
-        url_auth is optional Basic auth ('<username>', '<password'>) tuple
+        `url_auth` is optional Basic auth ('<username>', '<password'>) tuple
         to use if the url to download requires authentication.
+        `url_cache` is an object with a dict interface, keyed on url
+            url_cache[url] = { md5: ..., If-None-Match: etag, If-Modified-Since: date }
+        `hash_cache` is an obhect with dict interface, keyed on md5
+            hash_cache[md5] = ( s3_url, mime_type, dimensions )
     """
-    (file_path, md5, mime_type) = checkChunks(url, url_auth)
+    StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
+    (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
+    try:
+        return StashReport(url, md5, *hash_cache[md5])
+    except KeyError:
+        pass
     s3_url = md5_to_s3_url(md5, bucket_base)
     if conn is None:
         conn = boto.connect_s3()
     s3move(file_path, s3_url, mime_type, conn)
+    (mime, dimensions) = image_info(file_path)
     os.remove(file_path)  # safer than rmtree
-    StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type')
-    report = StashReport(url, md5, s3_url, mime_type)
+    hash_cache[md5] = (s3_url, mime, dimensions)
+    report = StashReport(url, md5, *hash_cache[md5])
     logging.getLogger('MD5S3:stash').info(report)
     return report
 
@@ -139,27 +158,42 @@ def md5_to_bucket_shard(md5):
     return basin.encode(ALPHABET, bucket)
 
 
-def urlopen_with_auth(url, auth=None):
+def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
     auth is tuple of (username, password)
     '''
+    opener = urllib2.build_opener(DefaultErrorHandler())
+    req = urllib2.Request(url)
+    p = urlparse.urlparse(url)
+
+    # try to set headers for conditional get request
+    try:
+        here = cache[url]
+        if 'If-None-Match' in here:
+            req.add_header('If-None-Match', cache[url]['If-None-Match'],)
+        if 'If-Modified-Since' in here:
+            req.add_header('If-Modified-Since', cache[url]['If-Modified-Since'],)
+    except KeyError:
+        pass
+
     if not auth:
-        return urllib.urlopen(url)  # urllib works with normal file paths
+        if p.scheme not in ['http', 'https']:
+            return urllib.urlopen(url) # urllib works with normal file paths
     else:
         # make sure https
-        p = urlparse.urlparse(url)
         if p.scheme != 'https':
             raise urllib2.URLError('Basic auth not over https is bad idea! \
                     scheme:{0}'.format(p.scheme))
         # Need to add header so it gets sent with first request,
         # else redirected to shib
         b64authstr = base64.b64encode('{0}:{1}'.format(*auth))
-        req = urllib2.Request(url)
         req.add_header('Authorization', 'Basic {0}'.format(b64authstr))
-        return urllib2.urlopen(req)
+
+    # return urllib2.urlopen(req)
+    return opener.open(req)
 
 
-def checkChunks(url, auth=None):
+def checkChunks(url, auth=None, cache={}):
     """
        Helper to download large files the only arg is a url this file
        will go to a temp directory the file will also be downloaded in
@@ -175,9 +209,19 @@ def checkChunks(url, auth=None):
     BLOCKSIZE = 1024 * hasher.block_size
 
     try:
-        # urllib works with normal file paths
-        req = urlopen_with_auth(url, auth)
+        req = urlopen_with_auth(url, auth=auth, cache=cache)
+        thisurl = cache.get(url, dict())
+        if req.getcode() == 304:
+            return None, thisurl['md5'], None
         mime_type = req.info()['Content-type']
+        # record these headers, they will let us pretend like we are a cacheing
+        # proxy server, and send conditional GETs next time we see this file
+        etag = req.info().get('ETag', None);
+        if etag:
+            thisurl['If-None-Match'] = etag
+        lmod = req.info().get('Last-Modified', None);
+        if lmod:
+            thisurl['If-Modified-Since'] = lmod
         downloaded = 0
         with temp_file:
             while True:
@@ -194,7 +238,10 @@ def checkChunks(url, auth=None):
         print "URL Error:", e.reason, url
         return False
 
-    return temp_file.name, hasher.hexdigest(), mime_type
+    md5 = hasher.hexdigest()
+    thisurl['md5'] = md5
+    cache[url] = thisurl
+    return temp_file.name, md5, mime_type
 
 
 def s3move(place1, place2, mime, s3):
@@ -226,13 +273,43 @@ def s3move(place1, place2, mime, s3):
         l.info('key existed already')
 
 
+def image_info(filepath):
+    ''' get image info
+        `filepath` path to a file
+        returns
+          a tuple of two values
+            1. mime/type if an image; otherwise None
+            2. a tuple of (height, width) if an image; otherwise (0,0)
+    '''
+    try:
+        return (
+            magic.Magic(mime=True).from_file(filepath),
+            Image.open(filepath).size
+        )
+    except IOError as e:
+        if not e.message.startswith('cannot identify image file'):
+            raise e
+        else:
+            return (None, (0,0))
+
+
+# example 11.7 Defining URL handlers
+# http://www.diveintopython.net/http_web_services/etags.html
+class DefaultErrorHandler(urllib2.HTTPDefaultErrorHandler):
+    def http_error_304(self, req, fp, code, msg, headers):
+        result = urllib2.HTTPError(
+            req.get_full_url(), code, msg, headers, fp)
+        result.status = code
+        return result
+
+
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
 
 
 """
-Copyright (c) 2014, Regents of the University of California
+Copyright (c) 2015, Regents of the University of California
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

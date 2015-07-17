@@ -1,10 +1,12 @@
 md5s3stash
 ==========
 
+![build status](https://travis-ci.org/ucldc/md5s3stash.svg)
+
 content addressable storage in AWS S3
 
 ```
-pip install https://github.com/tingletech/md5s3stash/archive/master.zip
+pip install https://github.com/ucldc/md5s3stash/archive/master.zip
 ```
 
 Assumptions:
@@ -12,8 +14,10 @@ Assumptions:
  * content on the web (url can be local file, however)
  * this is running in AWS on a machine with IAM role to write to the `BUCKET_BASE`
  * md5.hexdigest is used as the key to the file in the bucket
- * content is split into 36 buckets (`0-9a-z.BUCKET_BASE`) [see comments in code for details on why and how]
- * mime/type is set, but image is not make public
+
+ * content is split into 36 buckets (`0-9a-z.BUCKET_BASE`) [see comments in code for details on why and how]  TODO: change this
+
+ * mime/type is set, but image is not make public (actually, it is made public)
 
 ## Command line use
 
@@ -117,3 +121,18 @@ site-packages/tornado/log.py options:
 The `bucket_base` parameter, command line arguments `-b` and `--bucket_base`, and environmental variable `BUCKET_BASE`
 must be unique name in all of AWS S3.  The IAM role or user will need to be able to create/write/read to 36 buckets
 (`0-9a-z.BUCKET_BASE`).
+
+## Development
+
+md5s3stash has been tested on python 2.6 & 2.7.
+
+python setup.py test
+
+The test code has an example of using redis-collections as the caching dictionary.
+
+To run a test of redis integration with the caching mechanism, set the environment variable LIVE_REDIS_TEST and have a redis server running locally.
+
+Local redis with docker:
+
+docker pull redis
+docker run -p 6379:6379 --name md5-test -d redis

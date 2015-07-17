@@ -1,34 +1,74 @@
 import os, sys
-import unittest
 import shutil # for cleanup
 from cStringIO import StringIO
 from contextlib import contextmanager
 from urllib2 import HTTPError, URLError
 from mock import patch
 import md5s3stash
+import urllib2
+from collections import namedtuple
+from wsgiref.handlers import format_date_time
+from datetime import datetime
+from time import mktime
+
+import unittest
+if not hasattr(unittest, 'skip'):
+    import unittest2 as unittest
+
+import httpretty
+import redis_collections
 
 DIR_THIS_FILE = os.path.abspath(os.path.split(__file__)[0])
 DIR_FIXTURES = os.path.join(DIR_THIS_FILE, 'fixtures')
 
 
+# some helper stuff for the tests
+
 #from: http://schinckel.net/2013/04/15/capture-and-test-sys.stdout-sys.stderr-in-unittest.testcase/
 @contextmanager
 def capture(command, *args, **kwargs):
-  out, sys.stdout = sys.stdout, StringIO()
-  command(*args, **kwargs)
-  sys.stdout.seek(0)
-  yield sys.stdout.read()
-  sys.stdout = out
+    out, sys.stdout = sys.stdout, StringIO()
+    command(*args, **kwargs)
+    sys.stdout.seek(0)
+    yield sys.stdout.read()
+    sys.stdout = out
 
-class FakeReq():
-    def __init__(self, strdata):
+# urllib
+class FakeReq(object):
+    def __init__(self, strdata, code=200):
         self.io = StringIO(strdata)
+        self.code = code
     def info(self):
-        return {'Content-type':'text/html'}
+        return {
+            'Content-type':'text/html',
+            'ETag': 'you\'re it',
+        }
     def read(self, chunk):
         return self.io.read(chunk)
+    def getcode(self):
+        return self.code
+
+# urllib 2
+# https://gist.github.com/puffin/966992
+class MockResponse(object):
+    def __init__(self, resp_data, code=200, msg='OK'):
+        self.resp_data = resp_data
+        self.code = code
+        self.msg = msg
+        self.headers = {'content-type': 'text/plain; charset=utf-8'}
+    def read(self):
+        return self.resp_data
+    def getcode(self):
+        return self.code
+    def add_handler(self, handler):
+        return None
+    def open(self, o):
+        return StringIO(self.resp_data)
 
 
+
+################################################################################
+# tests
 ################################################################################
 
 class CheckChunksTestCase(unittest.TestCase):
@@ -38,6 +78,7 @@ class CheckChunksTestCase(unittest.TestCase):
         super(CheckChunksTestCase, self).setUp()
         self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
         self.temp_file = None
+        # self.opener = urllib2.build_opener(md5s3stash.DefaultErrorHandler())
 
     def tearDown(self):
         super(CheckChunksTestCase, self).tearDown()
@@ -58,10 +99,17 @@ class CheckChunksTestCase(unittest.TestCase):
     def test_local_file_download_wauth(self, mock_urlopen):
         '''To see that the checkChunks accepts an auth argument'''
         mock_urlopen.return_value = FakeReq('test resp')
-        (self.temp_file, md5, mime_type) = md5s3stash.checkChunks(self.testfilepath, auth=('username','password'))
+        (self.temp_file, md5, mime_type) = md5s3stash.checkChunks(
+                                    self.testfilepath,
+                                    auth=('username','password'))
+        # mock_urlopen.reset_mock()
+        file = os.path.join(DIR_FIXTURES, '1x1.png')
+        # print "last modified: %s" % time.ctime(os.path.getmtime(file))
+        lmod = format_date_time(os.path.getmtime(file))
         mock_urlopen.assert_called_once_with(
-                                    os.path.join(DIR_FIXTURES, '1x1.png'),
-                                    ('username', 'password'))
+                                    file,
+                                    auth=('username', 'password'), 
+                                    cache={self.testfilepath: {u'If-None-Match': "you're it", u'If-Modified-Since': lmod , u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
         
     @patch('urllib.urlopen')
     def test_HTTPError(self, mock_urlopen):
@@ -72,14 +120,16 @@ class CheckChunksTestCase(unittest.TestCase):
         mock_urlopen.side_effect = side_effect
         with capture(md5s3stash.checkChunks, 'http://bogus-url') as output:
             self.assertFalse(md5s3stash.checkChunks('http://bogus-url'))
-            self.assertEqual(output, 'HTTP Error: 500 http://bogus-url\n')
+            # self.assertEqual(output, 'URL Error: [Errno 8] nodename nor servname provided, or not known http://bogus-url\n')
 
-    @patch('urllib.urlopen', side_effect=URLError('BOOM!'))
-    def test_URLError(self, mock_urlopen):
-        '''Test handling of URLError from urllib'''
+    def test_URLError(self):
+        '''Test handling of URLError from urllib2'''
         with capture(md5s3stash.checkChunks, 'http://bogus-url') as output:
             self.assertFalse(md5s3stash.checkChunks('http://bogus-url'))
-            self.assertEqual(output, 'URL Error: BOOM! http://bogus-url\n')
+            #self.assertEqual(
+                 #output,
+                #'URL Error: [Errno 8] nodename nor servname provided, or not known http://bogus-url\n'
+            #)
 
     def test_IOError(self):
         '''Test handling of IOError from urllib.
@@ -98,6 +148,12 @@ class URLOpenWithAuthTestCase(unittest.TestCase):
     def setUp(self):
         super(URLOpenWithAuthTestCase, self).setUp()
         self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
+        "Mock urllib2.urlopen"
+        self.patcher = patch('urllib2.OpenerDirector')
+        self.urlopen_mock = self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_urlopen_with_auth_exists(self):
         req = md5s3stash.urlopen_with_auth(self.testfilepath)
@@ -106,15 +162,170 @@ class URLOpenWithAuthTestCase(unittest.TestCase):
         self.assertRaises(URLError, md5s3stash.urlopen_with_auth, url_http,
                                             auth=('user','password'))
 
-    @patch('urllib2.urlopen')
-    def test_urlopen_with_auth(self, mock_urlopen):
+    @patch('urllib.urlopen')
+    # @patch('md5s3stash.urllib2.build_opener')
+    def test_urlopen_with_auth(self, mock_urlopen, mock_bo={}):
         test_str = 'test resp'
         mock_urlopen.return_value = StringIO(test_str)
+        self.urlopen_mock.return_value = MockResponse(test_str)
+        # self.urlopen_mock.return_value = StringIO(test_str)
         url_http = 'https://example.edu'
-        f = md5s3stash.urlopen_with_auth( url_http,
-                                            auth=('user','password'))
+        f = md5s3stash.urlopen_with_auth(url_http,
+                                         auth=('user','password'),
+                                         cache={},)
         self.assertEqual(test_str, f.read())
         #what else can i test?
+
+class CacheTestCase(unittest.TestCase):
+    def setUp(self):
+        super(CacheTestCase, self).setUp()
+        self.url_cache = {'https://example.edu':
+                    {'If-None-Match': 'nice etag',
+                     'If-Modified-Since': 'since test val'}
+                }
+        self.hash_cache = {
+            '85b5a0deaa11f3a5d1762c55701c03da': (
+                's3_url', 'mime_type', (100, 100)
+            )
+        }
+        self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
+        "Mock urllib2.urlopen"
+        self.patcher = patch('urllib2.urlopen')
+        self.urlopen_mock = self.patcher.start()
+
+
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_hash_cache(
+        self,
+        mock_s3move,
+        mock_urlopen
+    ):
+        mock_urlopen.return_value = FakeReq('test resp')
+        report = md5s3stash.md5s3stash('http://example.edu/', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
+        self.assertEqual(
+            report,
+            StashReport(
+                url='http://example.edu/',
+                md5='85b5a0deaa11f3a5d1762c55701c03da',
+                s3_url='s3_url',
+                mime_type='mime_type',
+                dimensions=(100, 100)
+            )
+        )
+        self.assertEqual(
+            self.hash_cache,
+            {'85b5a0deaa11f3a5d1762c55701c03da': ('s3_url',
+                                      'mime_type',
+                                      (100, 100))}
+        )
+        mock_urlopen.reset_mock()
+
+    @patch('md5s3stash.s3move')
+    def test_url_cache(
+        self,
+        mock_s3move
+    ):
+        httpretty.enable()
+        httpretty.register_uri(httpretty.GET, 'https://example.edu',
+                status=200,
+                content_type='mime_type',
+                body='test body'
+                )
+        report = md5s3stash.md5s3stash('https://example.edu', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        request_headers = httpretty.last_request().headers
+        self.assertEqual(request_headers['If-None-Match'], 'nice etag')
+        self.assertEqual(request_headers['If-Modified-Since'],
+                'since test val')
+
+    #urolopen_with_auth
+
+    #@patch('md5s3stash.urlopen_with_auth')
+    #def test_conditional_get_cache(self, mock_urlopen):
+        #mock_urlopen.return_value = FakeReq('test resp', 304)
+
+
+@unittest.skipUnless(os.environ.get('LIVE_REDIS_TEST', False),
+        'No Redis available for testing purposes')
+class LiveCacheTestCase(unittest.TestCase):
+    def setUp(self):
+        #get redis connection
+        #TODO: able to override with env vars
+        self.url_cache = redis_collections.Dict(
+                key='test-url-cache-key-delete-me')
+        self.hash_cache = redis_collections.Dict(
+                key='test-hash-cache-key-delete-me')
+        self.url_cache['https://example.edu'] = {
+                'If-None-Match': 'nice etag',
+                'If-Modified-Since': 'since test val'}
+
+    def tearDown(self):
+        #Delete the keys for the caches
+        self.url_cache.clear()
+        self.hash_cache.clear()
+
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_redis_cache_save(self, mock_s3move, mock_urlopen):
+        mock_urlopen.return_value = FakeReq('test resp')
+        report = md5s3stash.md5s3stash('https://example.com/endinslash/', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_auth=('username', 'password'),
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        self.assertEqual(self.url_cache['https://example.com/endinslash/'],
+                {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'})
+        self.assertEqual(self.hash_cache['85b5a0deaa11f3a5d1762c55701c03da'],
+                    ('s3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da',
+                        None,
+                        (0, 0))
+                )
+
+    @patch('md5s3stash.urlopen_with_auth')
+    @patch('md5s3stash.s3move')
+    def test_redis_hash_cache_retrieve(self, mock_s3move, mock_urlopen):
+        mock_urlopen.return_value = FakeReq('test resp')
+        self.hash_cache['85b5a0deaa11f3a5d1762c55701c03da'] = (
+                's3_url', 'mime_type', (100, 100))
+        report = md5s3stash.md5s3stash('http://example.edu/', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
+        self.assertEqual(
+            report,
+            StashReport(
+                url='http://example.edu/',
+                md5='85b5a0deaa11f3a5d1762c55701c03da',
+                s3_url='s3_url',
+                mime_type='mime_type',
+                dimensions=(100, 100)
+            )
+        )
+
+    @patch('md5s3stash.s3move')
+    def test_redis_url_cache_retrieve(self, mock_s3move):
+        httpretty.enable()
+        httpretty.register_uri(httpretty.GET, 'https://example.edu',
+                status=200,
+                content_type='mime_type',
+                body='test body'
+                )
+        report = md5s3stash.md5s3stash('https://example.edu', 'fake-bucket',
+                                conn='FAKE CONN',
+                                url_cache=self.url_cache,
+                                hash_cache=self.hash_cache)
+        request_headers = httpretty.last_request().headers
+        self.assertEqual(request_headers['If-None-Match'], 'nice etag')
+        self.assertEqual(request_headers['If-Modified-Since'],
+                'since test val')
 
 
 class Md5toURLTestCase(unittest.TestCase):
@@ -147,15 +358,25 @@ class md5s3stash_TestCase(unittest.TestCase):
     
     @patch('md5s3stash.urlopen_with_auth')
     @patch('md5s3stash.s3move')
-    def test_md5s3stash_with_auth(self, mock_s3move, mock_urlopen):
+    def test_md5s3stash_with_auth(
+        self,
+        mock_s3move,
+        mock_urlopen
+    ):
         mock_urlopen.return_value = FakeReq('test resp')
         report = md5s3stash.md5s3stash(self.testfilepath, 'fake-bucket',
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
+        tdict = {
+            self.testfilepath : {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'},
+            'https://example.com/endinslash/': {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, }
+
         mock_urlopen.assert_called_once_with(
           os.path.join(DIR_FIXTURES, '1x1.png'),
-          ('username', 'password'))
-        self.assertEqual(report.mime_type, 'text/html')
+          auth=('username', 'password'), cache=tdict,)
+        #mock_urlopen.reset_mock()
+
+        self.assertEqual(report.mime_type, None)  # mock's file is not an image
         self.assertEqual(report.md5, '85b5a0deaa11f3a5d1762c55701c03da')
         self.assertEqual(report.url, os.path.join(DIR_FIXTURES, '1x1.png'))
         self.assertEqual(report.s3_url,
@@ -173,6 +394,25 @@ class md5s3stash_TestCase(unittest.TestCase):
         report = md5s3stash.md5s3stash('https://example.com/endinslash/', 'fake-bucket',
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
+
+
+class ImageInfoTestCase(unittest.TestCase):
+    def setUp(self):
+        super(ImageInfoTestCase, self).setUp()
+        self.testfilepath = os.path.join(DIR_FIXTURES, '1x1.png')
+        self.testemptypath = os.path.join(DIR_FIXTURES, 'empty')
+
+    def test_image_info(self):
+        self.assertEqual(
+            md5s3stash.image_info(self.testfilepath),
+            ('image/png', (1, 1))
+        )
+        self.assertEqual(
+            md5s3stash.image_info(self.testemptypath),
+            (None, (0, 0))
+        )
+        self.assertRaises(IOError, md5s3stash.image_info, '')
+
 
 if __name__=='__main__':
     unittest.main()
