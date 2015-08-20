@@ -30,6 +30,7 @@ class ThumbnailImageHandler(ImageHandler):
         self.args.update(dict(w=w, h=h, url=url, mode=mode))
         self.validate_request()
         resp = yield self.fetch_image()
+        resp.headers["Cache-Control"] = "public, max-age=31536000"
         self.render_image(resp)
 
 
