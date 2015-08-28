@@ -1,13 +1,24 @@
 FROM ubuntu:14.04
 MAINTAINER "Brian Tingle <brian.tingle@ucop.edu>"
 
-RUN apt-get update -y
-RUN apt-get upgrade -y
-RUN apt-get install -y build-essential
-RUN apt-get install -y python python-dev python-setuptools python-pip
-RUN apt-get install -y python-numpy python-opencv
-RUN apt-get install -y libjpeg-dev libfreetype6-dev zlib1g-dev
-RUN apt-get install -y libwebp-dev liblcms2-dev libcurl4-openssl-dev
+RUN apt-get update -y && \
+  apt-get upgrade -y && \
+  apt-get install -yq --no-install-recommends \
+    build-essential \
+    python \
+    python-dev \
+    python-numpy \
+    python-opencv \
+    python-pip \
+    python-setuptools \
+    libcurl4-openssl-dev \
+    libfreetype6-dev \
+    libjpeg-dev \
+    liblcms2-dev \
+    libwebp-dev \
+    zlib1g-dev && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
 
 ADD requirements.txt .
 ADD thumbnail.py .
