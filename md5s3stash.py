@@ -157,6 +157,14 @@ def md5_to_bucket_shard(md5):
     bucket = int_value % len(ALPHABET)
     return basin.encode(ALPHABET, bucket)
 
+def is_s3_url(url):
+    '''For s3 urls, if you send http authentication headers, S3 will
+    send a "400 Bad Request" in response.
+    This is a basic check looking for the fixed string:
+    "s3.amazonaws.com" in the url.
+    Sufficient for now (20150902)
+    '''
+    return "s3.amazonaws.com" in url
 
 def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
@@ -176,7 +184,7 @@ def urlopen_with_auth(url, auth=None, cache={}):
     except KeyError:
         pass
 
-    if not auth:
+    if not auth or is_s3_url(url):
         if p.scheme not in ['http', 'https']:
             return urllib.urlopen(url) # urllib works with normal file paths
     else:
