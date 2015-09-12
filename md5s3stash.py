@@ -118,22 +118,37 @@ def md5s3stash(
 
 # think about refactoring the next two functions
 
-def md5_to_s3_url(md5, bucket_base):
+def md5_to_s3_url(md5, bucket_base, bucket_scheme='multibucket'):
     """ calculate the s3 URL given an md5 and an bucket_base """
-    return "s3://{0}.{1}/{2}".format(
-        md5_to_bucket_shard(md5),
-        bucket_base,
-        md5
-    )
+    if bucket_scheme == 'simple':
+        url = "s3://{0}/{1}".format(
+            bucket_base,
+            md5
+        )
+    elif bucket_scheme == 'multibucket':
+        url = "s3://{0}.{1}/{2}".format(
+            md5_to_bucket_shard(md5),
+            bucket_base,
+            md5
+        )
+    return url
 
 
-def md5_to_http_url(md5, bucket_base):
+
+def md5_to_http_url(md5, bucket_base, bucket_scheme='multibucket'):
     """ calculate the http URL given an md5 and an bucket_base """
-    return "http://{0}.{1}.s3.amazonaws.com/{2}".format(
-        md5_to_bucket_shard(md5),
-        bucket_base,
-        md5
-    )
+    if bucket_scheme == 'simple':
+        url = "http://s3.amazonaws.com/{0}/{1}".format(
+            bucket_base,
+            md5
+        )
+    elif bucket_scheme == 'multibucket':
+        url = "http://{0}.{1}.s3.amazonaws.com/{2}".format(
+            md5_to_bucket_shard(md5),
+            bucket_base,
+            md5
+        )
+    return url
 
 
 def md5_to_bucket_shard(md5):
