@@ -9,23 +9,29 @@ content addressable storage in AWS S3
 pip install https://github.com/ucldc/md5s3stash/archive/master.zip
 ```
 
-Assumptions:
-
+Original Assumptions:
+ * "Consider utilizing multiple buckets that start with different alphanumeric characters. This will ensure a degree of partitioning from the start. The higher your volume of concurrent PUT and GET requests, the more impact this will likely have."  -- http://aws.amazon.com/articles/1904 (circa 2009)
  * content on the web (url can be local file, however)
  * this is running in AWS on a machine with IAM role to write to the `BUCKET_BASE`
  * md5.hexdigest is used as the key to the file in the bucket
-
  * content is split into 36 buckets (`0-9a-z.BUCKET_BASE`) [see comments in code for details on why and how]  TODO: change this
-
  * mime/type is set, but image is not make public (actually, it is made public)
+
+Turns out:
+ * first assumption is no longer true (in 2015)
+ * added `BUCKET_SCHEME` to thumbnailer configuration (defaults right now to `multibucket`)
+ * version `0.4.0` adds `-s` bucket scheme parameter to the md5s3stash file stasher with a default of `simple`
+ * there is a script `migrate/migrate.sh` to move from legacy `multibucket` to `simple` on S3
+
 
 ## Command line use
 
 see `md5s3stash -h`
 ```
-usage: md5s3stash [-h] [-b [BUCKET_BASE]] [-t TEMPDIR] [-w]
-                  [--loglevel LOGLEVEL]
-                  url [url ...]
+md5s3stash [-h] [-b [BUCKET_BASE]] [-s [{simple,multivalue}]]
+                     [-t TEMPDIR] [-w] [--loglevel LOGLEVEL] [-u USERNAME]
+                     [-p PASSWORD]
+                     url [url ...]
 
 content addressable storage in AWS S3
 
@@ -36,12 +42,17 @@ optional arguments:
   -h, --help            show this help message and exit
   -b [BUCKET_BASE], --bucket_base [BUCKET_BASE]
                         this must be a unique name in all of AWS S3
+  -s [{simple,multivalue}], --bucket_scheme [{simple,multivalue}]
+                        this must be a unique name in all of AWS S3
   -t TEMPDIR, --tempdir TEMPDIR
                         if your files might be large, make sure this is on a
                         big disk
   -w, --warnings        show python `DeprecationWarning`s supressed by default
   --loglevel LOGLEVEL
-
+  -u USERNAME, --username USERNAME
+                        username for downloads requiring BasicAuth
+  -p PASSWORD, --password PASSWORD
+                        password for downloads requiring BasicAuth
 ```
 
 ## Library use
@@ -122,9 +133,12 @@ The `bucket_base` parameter, command line arguments `-b` and `--bucket_base`, an
 must be unique name in all of AWS S3.  The IAM role or user will need to be able to create/write/read to 36 buckets
 (`0-9a-z.BUCKET_BASE`).
 
+When using the `simple` bucket scheme, the `BUCKET_BASE` can have `/`s in it, so it can
+specific a "path" in the bucket to find the images.
+
 ## Development
 
-md5s3stash has been tested on python 2.6 & 2.7.
+md5s3stash has been tested on python 2.6 & 2.7.  (2.6 support might be dropped soon)
 
 python setup.py test
 
