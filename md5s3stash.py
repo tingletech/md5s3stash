@@ -27,6 +27,9 @@ def main(argv=None):
                         help='URL or path of source file to stash')
     parser.add_argument('-b', '--bucket_base', nargs="?",
                         help='this must be a unique name in all of AWS S3')
+    parser.add_argument('-s', '--bucket_scheme', nargs="?",
+                        default="simple", choices=['simple', 'multivalue'],
+                        help='this must be a unique name in all of AWS S3')
     parser.add_argument(
         '-t', '--tempdir',
         required=False,
@@ -77,7 +80,7 @@ def main(argv=None):
     conn = boto.connect_s3()
     for url in argv.url:
         print("{0}\t{1}\t{2}\t{3}".format(
-            *md5s3stash(url, bucket_base, conn, url_auth=auth)
+            *md5s3stash(url, bucket_base, conn, url_auth=auth, bucket_scheme=argv.bucket_scheme)
         ))
 
 
@@ -87,7 +90,8 @@ def md5s3stash(
         conn=None,
         url_auth=None,
         url_cache={},
-        hash_cache={}
+        hash_cache={},
+        bucket_scheme='simple'
     ):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
@@ -97,6 +101,7 @@ def md5s3stash(
             url_cache[url] = { md5: ..., If-None-Match: etag, If-Modified-Since: date }
         `hash_cache` is an obhect with dict interface, keyed on md5
             hash_cache[md5] = ( s3_url, mime_type, dimensions )
+        `bucket_scheme` is text string 'simple' or 'multibucket'
     """
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
     (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
@@ -172,6 +177,14 @@ def md5_to_bucket_shard(md5):
     bucket = int_value % len(ALPHABET)
     return basin.encode(ALPHABET, bucket)
 
+def is_s3_url(url):
+    '''For s3 urls, if you send http authentication headers, S3 will
+    send a "400 Bad Request" in response.
+    This is a basic check looking for the fixed string:
+    "s3.amazonaws.com" in the url.
+    Sufficient for now (20150902)
+    '''
+    return "s3.amazonaws.com" in url
 
 def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
@@ -191,7 +204,7 @@ def urlopen_with_auth(url, auth=None, cache={}):
     except KeyError:
         pass
 
-    if not auth:
+    if not auth or is_s3_url(url):
         if p.scheme not in ['http', 'https']:
             return urllib.urlopen(url) # urllib works with normal file paths
     else:
