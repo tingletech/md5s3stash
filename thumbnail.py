@@ -32,6 +32,7 @@ class ThumbnailImageHandler(ImageHandler):
             md5,
             os.environ['BUCKET_BASE'],
             bucket_scheme=os.getenv('BUCKET_SCHEME', 'multibucket'),
+            s3_endpoint=os.getenv('S3_ENDPOINT'),
         )
         self.args.update(dict(w=w, h=h, url=url, mode=mode))
         self.validate_request()

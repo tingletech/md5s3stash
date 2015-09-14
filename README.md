@@ -133,6 +133,8 @@ The `bucket_base` parameter, command line arguments `-b` and `--bucket_base`, an
 must be unique name in all of AWS S3.  The IAM role or user will need to be able to create/write/read to 36 buckets
 (`0-9a-z.BUCKET_BASE`).
 
+S3_ENDPOINT
+
 When using the `simple` bucket scheme, the `BUCKET_BASE` can have `/`s in it, so it can
 specific a "path" in the bucket to find the images.
 

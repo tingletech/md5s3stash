@@ -140,15 +140,17 @@ def md5_to_s3_url(md5, bucket_base, bucket_scheme='multibucket'):
 
 
 
-def md5_to_http_url(md5, bucket_base, bucket_scheme='multibucket'):
+def md5_to_http_url(md5, bucket_base, bucket_scheme='multibucket', s3_endpoint='s3.amazonaws.com'):
     """ calculate the http URL given an md5 and an bucket_base """
     if bucket_scheme == 'simple':
-        url = "http://s3.amazonaws.com/{0}/{1}".format(
+        url = "http://{0}/{1}/{2}".format(
+            s3_endpoint,
             bucket_base,
             md5
         )
     elif bucket_scheme == 'multibucket':
-        url = "http://{0}.{1}.s3.amazonaws.com/{2}".format(
+        url = "http://{1}.{2}.{0}/{3}".format(
+            s3_endpoint,
             md5_to_bucket_shard(md5),
             bucket_base,
             md5
@@ -184,6 +186,7 @@ def is_s3_url(url):
     "s3.amazonaws.com" in the url.
     Sufficient for now (20150902)
     '''
+    # moving to OR this will be s3-us-west-2.amazonaws.com
     return "s3.amazonaws.com" in url
 
 def urlopen_with_auth(url, auth=None, cache={}):
