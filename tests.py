@@ -421,6 +421,7 @@ class md5s3stash_TestCase(unittest.TestCase):
 class TestIsS3URL(unittest.TestCase):
     def test_is_s3_url(self):
         self.assertTrue(md5s3stash.is_s3_url('https://s3.amazonaws.com/adlkfj'))
+        self.assertTrue(md5s3stash.is_s3_url('https://s3-us-west-2.amazonaws.com/adlkfj'))
         self.assertFalse(md5s3stash.is_s3_url('https://s3.amazonas.com/adlkfj'))
 
 class ImageInfoTestCase(unittest.TestCase):
