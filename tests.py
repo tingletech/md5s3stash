@@ -338,14 +338,36 @@ class Md5toURLTestCase(unittest.TestCase):
         self.assertEqual(md5s3stash.md5_to_s3_url(self.md5, self.bucket_base), 
                         's3://1.test/d68e763c825dc0e388929ae1b375ce18'
                         )
+        self.assertEqual(md5s3stash.md5_to_s3_url(self.md5, self.bucket_base, 'simple'),
+                        's3://test/d68e763c825dc0e388929ae1b375ce18'
+                        )
 
     def test_md5_to_http_url(self):
         self.assertEqual(md5s3stash.md5_to_http_url(self.md5, self.bucket_base),
                         'http://1.test.s3.amazonaws.com/d68e763c825dc0e388929ae1b375ce18'
                         )
+        self.assertEqual(md5s3stash.md5_to_http_url(self.md5, self.bucket_base, 'simple'),
+                        'http://s3.amazonaws.com/test/d68e763c825dc0e388929ae1b375ce18'
+                        )
 
     def test_md5_to_bucket_shard(self):
         self.assertEqual(md5s3stash.md5_to_bucket_shard(self.md5), '1')
+
+
+class Md5toURLSimplePathTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.md5 = 'd68e763c825dc0e388929ae1b375ce18'
+        self.bucket_base = 'test/path/path'
+
+    def test_md5_to_s3_url(self):
+        self.assertEqual(md5s3stash.md5_to_s3_url(self.md5, self.bucket_base), 
+                        's3://1.test/path/path/d68e763c825dc0e388929ae1b375ce18'
+                        )
+
+        self.assertEqual(md5s3stash.md5_to_http_url(self.md5, self.bucket_base, 'simple'),
+                        'http://s3.amazonaws.com/test/path/path/d68e763c825dc0e388929ae1b375ce18'
+                        )
 
 class md5s3stash_TestCase(unittest.TestCase):
     '''Want to test pass through of auth credentials.
@@ -395,6 +417,11 @@ class md5s3stash_TestCase(unittest.TestCase):
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
 
+
+class TestIsS3URL(unittest.TestCase):
+    def test_is_s3_url(self):
+        self.assertTrue(md5s3stash.is_s3_url('https://s3.amazonaws.com/adlkfj'))
+        self.assertFalse(md5s3stash.is_s3_url('https://s3.amazonas.com/adlkfj'))
 
 class ImageInfoTestCase(unittest.TestCase):
     def setUp(self):

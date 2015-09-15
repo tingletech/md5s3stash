@@ -10,7 +10,7 @@ setup(
     name='md5s3stash',
     description='content addressable storage in AWS S3',
     long_description=read('README.md'),
-    version='0.3.0',
+    version='0.4.0',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -23,6 +23,7 @@ setup(
     # need to point directly at source pilbox-1.0.3.tar.gz so that
     # dumb binary pilbox-1.0.3.linux-x86_64.tar.gz is not the file downloaded
     # setuptools wants source code. Check PyPi to see if fixed...
+    #NOTE: #2: second dependency_links (redis-collections) is for python 2.6 support
     dependency_links = [
             'https://pypi.python.org/packages/source/p/pilbox/pilbox-1.0.3.tar.gz#md5=514a99f784a4c06242144a005322fe52#egg=pilbox', 
             'https://github.com/mredar/redis-collections/archive/master.zip#egg=redis-collections',

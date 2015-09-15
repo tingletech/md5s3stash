@@ -6,6 +6,8 @@ import tornado.gen
 from pilbox.app import PilboxApplication, ImageHandler, main
 from md5s3stash import md5_to_http_url
 import os
+
+
 assert 'BUCKET_BASE' in os.environ, "`BUCKET_BASE` must be set"
 
 
@@ -26,7 +28,12 @@ class ThumbnailImageHandler(ImageHandler):
 
     @tornado.gen.coroutine
     def get(self, mode, w, h, md5='0d6cc125540194549459df758af868a8'):
-        url = md5_to_http_url(md5, os.environ['BUCKET_BASE'])
+        url = md5_to_http_url(
+            md5,
+            os.environ['BUCKET_BASE'],
+            bucket_scheme=os.getenv('BUCKET_SCHEME', 'multibucket'),
+            s3_endpoint=os.getenv('S3_ENDPOINT'),
+        )
         self.args.update(dict(w=w, h=h, url=url, mode=mode))
         self.validate_request()
         resp = yield self.fetch_image()
@@ -39,4 +46,4 @@ class ThumbnailImageHandler(ImageHandler):
 
 
 if __name__ == "__main__":
-    main(app=ThumbnailApplication())
+    main(app=ThumbnailApplication(timeout=30,))

@@ -27,6 +27,9 @@ def main(argv=None):
                         help='URL or path of source file to stash')
     parser.add_argument('-b', '--bucket_base', nargs="?",
                         help='this must be a unique name in all of AWS S3')
+    parser.add_argument('-s', '--bucket_scheme', nargs="?",
+                        default="simple", choices=['simple', 'multivalue'],
+                        help='this must be a unique name in all of AWS S3')
     parser.add_argument(
         '-t', '--tempdir',
         required=False,
@@ -77,7 +80,7 @@ def main(argv=None):
     conn = boto.connect_s3()
     for url in argv.url:
         print("{0}\t{1}\t{2}\t{3}".format(
-            *md5s3stash(url, bucket_base, conn, url_auth=auth)
+            *md5s3stash(url, bucket_base, conn, url_auth=auth, bucket_scheme=argv.bucket_scheme)
         ))
 
 
@@ -87,7 +90,8 @@ def md5s3stash(
         conn=None,
         url_auth=None,
         url_cache={},
-        hash_cache={}
+        hash_cache={},
+        bucket_scheme='simple'
     ):
     """ stash a file at `url` in the named `bucket_base` ,
         `conn` is an optional boto.connect_s3()
@@ -97,6 +101,7 @@ def md5s3stash(
             url_cache[url] = { md5: ..., If-None-Match: etag, If-Modified-Since: date }
         `hash_cache` is an obhect with dict interface, keyed on md5
             hash_cache[md5] = ( s3_url, mime_type, dimensions )
+        `bucket_scheme` is text string 'simple' or 'multibucket'
     """
     StashReport = namedtuple('StashReport', 'url, md5, s3_url, mime_type, dimensions')
     (file_path, md5, mime_type) = checkChunks(url, url_auth, url_cache)
@@ -118,22 +123,39 @@ def md5s3stash(
 
 # think about refactoring the next two functions
 
-def md5_to_s3_url(md5, bucket_base):
+def md5_to_s3_url(md5, bucket_base, bucket_scheme='multibucket'):
     """ calculate the s3 URL given an md5 and an bucket_base """
-    return "s3://{0}.{1}/{2}".format(
-        md5_to_bucket_shard(md5),
-        bucket_base,
-        md5
-    )
+    if bucket_scheme == 'simple':
+        url = "s3://{0}/{1}".format(
+            bucket_base,
+            md5
+        )
+    elif bucket_scheme == 'multibucket':
+        url = "s3://{0}.{1}/{2}".format(
+            md5_to_bucket_shard(md5),
+            bucket_base,
+            md5
+        )
+    return url
 
 
-def md5_to_http_url(md5, bucket_base):
+
+def md5_to_http_url(md5, bucket_base, bucket_scheme='multibucket', s3_endpoint='s3.amazonaws.com'):
     """ calculate the http URL given an md5 and an bucket_base """
-    return "http://{0}.{1}.s3.amazonaws.com/{2}".format(
-        md5_to_bucket_shard(md5),
-        bucket_base,
-        md5
-    )
+    if bucket_scheme == 'simple':
+        url = "http://{0}/{1}/{2}".format(
+            s3_endpoint,
+            bucket_base,
+            md5
+        )
+    elif bucket_scheme == 'multibucket':
+        url = "http://{1}.{2}.{0}/{3}".format(
+            s3_endpoint,
+            md5_to_bucket_shard(md5),
+            bucket_base,
+            md5
+        )
+    return url
 
 
 def md5_to_bucket_shard(md5):
@@ -164,6 +186,7 @@ def is_s3_url(url):
     "s3.amazonaws.com" in the url.
     Sufficient for now (20150902)
     '''
+    # moving to OR this will be s3-us-west-2.amazonaws.com
     return "s3.amazonaws.com" in url
 
 def urlopen_with_auth(url, auth=None, cache={}):
