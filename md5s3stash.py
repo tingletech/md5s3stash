@@ -18,6 +18,9 @@ import boto
 import magic
 from PIL import Image
 from collections import namedtuple
+import re
+
+regex_s3 = re.compile(r's3.*amazonaws.com')
 
 
 def main(argv=None):
@@ -182,12 +185,11 @@ def md5_to_bucket_shard(md5):
 def is_s3_url(url):
     '''For s3 urls, if you send http authentication headers, S3 will
     send a "400 Bad Request" in response.
-    This is a basic check looking for the fixed string:
-    "s3.amazonaws.com" in the url.
-    Sufficient for now (20150902)
+    Now look for s3*.amazonaws.com
     '''
     # moving to OR this will be s3-us-west-2.amazonaws.com
-    return "s3.amazonaws.com" in url
+    match = regex_s3.search(url)
+    return True if match else False
 
 def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
