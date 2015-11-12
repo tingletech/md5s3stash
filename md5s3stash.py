@@ -112,7 +112,7 @@ def md5s3stash(
         return StashReport(url, md5, *hash_cache[md5])
     except KeyError:
         pass
-    s3_url = md5_to_s3_url(md5, bucket_base)
+    s3_url = md5_to_s3_url(md5, bucket_base, bucket_scheme=bucket_scheme)
     if conn is None:
         conn = boto.connect_s3()
     s3move(file_path, s3_url, mime_type, conn)
