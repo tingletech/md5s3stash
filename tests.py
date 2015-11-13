@@ -402,7 +402,7 @@ class md5s3stash_TestCase(unittest.TestCase):
         self.assertEqual(report.md5, '85b5a0deaa11f3a5d1762c55701c03da')
         self.assertEqual(report.url, os.path.join(DIR_FIXTURES, '1x1.png'))
         self.assertEqual(report.s3_url,
-            's3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da')
+            's3://fake-bucket/85b5a0deaa11f3a5d1762c55701c03da')
 
     @patch('md5s3stash.urlopen_with_auth')
     @patch('md5s3stash.s3move')
