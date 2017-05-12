@@ -289,12 +289,12 @@ def s3move(place1, place2, mime, s3):
     # SplitResult(scheme='s3', netloc='test.pdf', path='/dkd', query=''
     # , fragment='')
     try:
-        bucket = s3.get_bucket(parts.netloc)
+        bucket = s3.get_bucket(parts.netloc, validate=False)
         l.debug('bucket exists')
     except boto.exception.S3ResponseError:
         bucket = s3.create_bucket(parts.netloc)
         l.debug('bucket created')
-    if not(bucket.get_key(parts.path)):
+    if not(bucket.get_key(parts.path, validate=False)):
         key = bucket.new_key(parts.path)
         # metadata has to be set before setting contents/creating object. 
         # See https://gist.github.com/garnaat/1791086
