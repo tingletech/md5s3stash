@@ -264,11 +264,11 @@ def checkChunks(url, auth=None, cache={}):
                 if not chunk:
                     break
                 temp_file.write(chunk)
-    except urllib2.HTTPError, e:
-        print "HTTP Error:", e.code, url
+    except urllib2.HTTPError as e:
+        print("HTTP Error:", e.code, url)
         return False
-    except urllib2.URLError, e:
-        print "URL Error:", e.reason, url
+    except urllib2.URLError as e:
+        print("URL Error:", e.reason, url)
         return False
 
     md5 = hasher.hexdigest()

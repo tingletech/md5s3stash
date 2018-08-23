@@ -1,8 +1,11 @@
 import os, sys
 import shutil # for cleanup
-from cStringIO import StringIO
+from io import StringIO
 from contextlib import contextmanager
-from urllib2 import HTTPError, URLError
+try:
+    from urllib2 import HTTPError, URLError
+except ImportError:
+    from urllib.error import HTTPError, URLError
 from mock import patch
 import md5s3stash
 import urllib2
