@@ -2,13 +2,10 @@ import os, sys
 import shutil # for cleanup
 from io import StringIO
 from contextlib import contextmanager
-try:
-    from urllib2 import HTTPError, URLError
-except ImportError:
-    from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError, URLError
 from mock import patch
 import md5s3stash
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 from collections import namedtuple
 from wsgiref.handlers import format_date_time
 from datetime import datetime
@@ -112,7 +109,7 @@ class CheckChunksTestCase(unittest.TestCase):
         mock_urlopen.assert_called_once_with(
                                     file,
                                     auth=('username', 'password'), 
-                                    cache={self.testfilepath: {u'If-None-Match': "you're it", u'If-Modified-Since': lmod , u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
+                                    cache={self.testfilepath: {'If-None-Match': "you're it", 'If-Modified-Since': lmod , 'md5': '85b5a0deaa11f3a5d1762c55701c03da'}})
         
     @patch('urllib.urlopen')
     def test_HTTPError(self, mock_urlopen):
@@ -284,7 +281,7 @@ class LiveCacheTestCase(unittest.TestCase):
                                 url_cache=self.url_cache,
                                 hash_cache=self.hash_cache)
         self.assertEqual(self.url_cache['https://example.com/endinslash/'],
-                {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'})
+                {'If-None-Match': "you're it", 'md5': '85b5a0deaa11f3a5d1762c55701c03da'})
         self.assertEqual(self.hash_cache['85b5a0deaa11f3a5d1762c55701c03da'],
                     ('s3://m.fake-bucket/85b5a0deaa11f3a5d1762c55701c03da',
                         None,
@@ -393,8 +390,8 @@ class md5s3stash_TestCase(unittest.TestCase):
                                 conn='FAKE CONN',
                                 url_auth=('username', 'password'))
         tdict = {
-            self.testfilepath : {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'},
-            'https://example.com/endinslash/': {u'If-None-Match': "you're it", u'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, }
+            self.testfilepath : {'If-None-Match': "you're it", 'md5': '85b5a0deaa11f3a5d1762c55701c03da'},
+            'https://example.com/endinslash/': {'If-None-Match': "you're it", 'md5': '85b5a0deaa11f3a5d1762c55701c03da'}, }
 
         mock_urlopen.assert_called_once_with(
           os.path.join(DIR_FIXTURES, '1x1.png'),

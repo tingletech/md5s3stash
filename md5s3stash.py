@@ -2,18 +2,17 @@
 """ md5s3stash
     content addressable storage in AWS S3
 """
-from __future__ import unicode_literals
 import sys
 import os
 import argparse
 import tempfile
-import urllib2
-import urllib
-import urlparse
+import urllib.request, urllib.error, urllib.parse
+# import urllib2
+# import urllib
+# import urlparse
 import base64
 import logging
 import hashlib
-import basin
 import boto
 import magic
 from PIL import Image
@@ -160,6 +159,23 @@ def md5_to_http_url(md5, bucket_base, bucket_scheme='multibucket', s3_endpoint='
         )
     return url
 
+def basin_encode(alphabet, n):
+    """
+    Encode integer value `n` using `alphabet`. The resulting string will be a
+    base-N representation of `n`, where N is the length of `alphabet`.
+    
+    """
+
+    if not (isinstance(n, int)):
+        raise TypeError('value to encode must be an int')
+    r = []
+    base  = len(alphabet)
+    while n >= base:
+        r.append(alphabet[n % base])
+        n = n / base
+    r.append(str(alphabet[n % base]))
+    r.reverse()
+    return ''.join(r)
 
 def md5_to_bucket_shard(md5):
     """ calculate the shard label of the bucket name from md5 """
@@ -180,7 +196,7 @@ def md5_to_bucket_shard(md5):
     int_value = int(md5[0], 16)+10*int(md5[1], 16)
     # divide by the length of the alphabet and take the remainder
     bucket = int_value % len(ALPHABET)
-    return basin.encode(ALPHABET, bucket)
+    return basin_encode(ALPHABET, bucket)
 
 def is_s3_url(url):
     '''For s3 urls, if you send http authentication headers, S3 will
@@ -195,9 +211,9 @@ def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
     auth is tuple of (username, password)
     '''
-    opener = urllib2.build_opener(DefaultErrorHandler())
-    req = urllib2.Request(url)
-    p = urlparse.urlparse(url)
+    opener = urllib.request.build_opener(DefaultErrorHandler())
+    req = urllib.request.Request(url)
+    p = urllib.parse.urlparse(url)
 
     # try to set headers for conditional get request
     try:
@@ -211,11 +227,11 @@ def urlopen_with_auth(url, auth=None, cache={}):
 
     if not auth or is_s3_url(url):
         if p.scheme not in ['http', 'https']:
-            return urllib.urlopen(url) # urllib works with normal file paths
+            return urllib.request.urlopen(url) # urllib works with normal file paths
     else:
         # make sure https
         if p.scheme != 'https':
-            raise urllib2.URLError('Basic auth not over https is bad idea! \
+            raise urllib.error.URLError('Basic auth not over https is bad idea! \
                     scheme:{0}'.format(p.scheme))
         # Need to add header so it gets sent with first request,
         # else redirected to shib
@@ -264,10 +280,10 @@ def checkChunks(url, auth=None, cache={}):
                 if not chunk:
                     break
                 temp_file.write(chunk)
-    except urllib2.HTTPError as e:
+    except urllib.error.HTTPError as e:
         print("HTTP Error:", e.code, url)
         return False
-    except urllib2.URLError as e:
+    except urllib.error.URLError as e:
         print("URL Error:", e.reason, url)
         return False
 
@@ -285,7 +301,7 @@ def s3move(place1, place2, mime, s3):
         'mime': mime,
         's3': s3,
     })
-    parts = urlparse.urlsplit(place2)
+    parts = urllib.parse.urlsplit(place2)
     # SplitResult(scheme='s3', netloc='test.pdf', path='/dkd', query=''
     # , fragment='')
     try:
@@ -328,9 +344,9 @@ def image_info(filepath):
 
 # example 11.7 Defining URL handlers
 # http://www.diveintopython.net/http_web_services/etags.html
-class DefaultErrorHandler(urllib2.HTTPDefaultErrorHandler):
+class DefaultErrorHandler(urllib.request.HTTPDefaultErrorHandler):
     def http_error_304(self, req, fp, code, msg, headers):
-        result = urllib2.HTTPError(
+        result = urllib.error.HTTPError(
             req.get_full_url(), code, msg, headers, fp)
         result.status = code
         return result
