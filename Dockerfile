@@ -27,7 +27,7 @@ ADD requirements.txt .
 ADD thumbnail.py .
 ADD md5s3stash.py .
 
-RUN python -m pip --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --trusted-host pypi.org install -r requirements.txt
+RUN pip install -r requirements.txt
  
 EXPOSE 8888
 CMD ["python", "thumbnail.py", "--position=face"]
