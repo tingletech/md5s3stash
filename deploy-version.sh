@@ -12,7 +12,7 @@ set -u
 
 ZIP=thumbnail-ebs.zip
 DIR=thumbnail-beanstalk
-BUCKET=xtf.dsc.cdlib.org
+BUCKET=ucldc-private-files
 REGION=us-west-2
 APPNAME=thumbnails-west
 
