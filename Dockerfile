@@ -17,11 +17,9 @@ RUN apt-get update -y && \
     libjpeg-dev \
     liblcms2-dev \
     libwebp-dev \
-    zlib1g-dev \
-    curl \
-    wget && \
- apt-get clean && \
- rm -rf /var/lib/apt/lists/*
+    zlib1g-dev && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
 
 ADD requirements.txt .
 ADD thumbnail.py .
