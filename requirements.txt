@@ -14,7 +14,7 @@ Pillow==5.2.0
 pycurl==7.43.0.2
 pyparsing==2.2.0
 python-magic==0.4.15
-PyYAML==3.13
+PyYAML==5.4
 requests==2.19.1
 safety==1.8.4
 singledispatch==3.4.0.3
