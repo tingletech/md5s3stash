@@ -10,7 +10,7 @@ fi
 
 set -u
 
-ZIP=thumbnail-ebs.zip
+ZIP="thubmnail-ebs-$1.zip"
 DIR=thumbnail-beanstalk
 BUCKET=ucldc-private-files
 REGION=us-west-2
