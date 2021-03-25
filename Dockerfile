@@ -16,6 +16,7 @@ RUN apt-get update -y && \
     libfreetype6-dev \
     libjpeg-dev \
     liblcms2-dev \
+    libmagic-dev \
     libwebp-dev \
     zlib1g-dev && \
   apt-get clean && \
