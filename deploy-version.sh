@@ -11,10 +11,10 @@ fi
 set -u
 
 ZIP="thubmnail-ebs-$1.zip"
-DIR=thumbnail-beanstalk
+DIR=thumbnail-beanstalk2
 BUCKET=ucldc-private-files
 REGION=us-west-2
-APPNAME=thumbnails-west
+APPNAME=thumbnails2
 
 zip $ZIP Dockerfile requirements.txt thumbnail.py md5s3stash.py
 aws s3 cp $ZIP s3://$BUCKET/$DIR/$ZIP
