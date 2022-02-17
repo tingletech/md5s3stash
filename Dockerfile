@@ -3,6 +3,7 @@ MAINTAINER "Brian Tingle <brian.tingle@ucop.edu>"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+# python 3.8
 RUN apt-get update -y && \
   apt-get upgrade -y && \
   apt-get install -yq --no-install-recommends \
