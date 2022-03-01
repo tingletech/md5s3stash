@@ -1,0 +1,11 @@
+Pillow==2.8.1
+backports.ssl-match-hostname==3.4.0.2
+basin==0.1
+boto==2.30.0
+certifi==2015.04.28
+pilbox==1.1.9
+pycurl==7.19.5.1
+python-magic==0.4.6
+sphinx-me==0.2.1
+tornado==4.0.2
+wsgiref==0.1.2
