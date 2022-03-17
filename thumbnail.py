@@ -4,11 +4,28 @@ extension to pilbox server http://agschwender.github.io/pilbox/#extension
 """
 import tornado.gen
 from pilbox.app import PilboxApplication, ImageHandler, main
-from md5s3stash import md5_to_http_url
 import os
 
 
 assert 'BUCKET_BASE' in os.environ, "`BUCKET_BASE` must be set"
+
+
+def md5_to_http_url(md5, bucket_base, bucket_scheme='multibucket', s3_endpoint='s3.amazonaws.com'):
+    """ calculate the http URL given an md5 and an bucket_base """
+    if bucket_scheme == 'simple':
+        url = "http://{0}/{1}/{2}".format(
+            s3_endpoint,
+            bucket_base,
+            md5
+        )
+    elif bucket_scheme == 'multibucket':
+        url = "http://{1}.{2}.{0}/{3}".format(
+            s3_endpoint,
+            md5_to_bucket_shard(md5),
+            bucket_base,
+            md5
+        )
+    return url
 
 
 class ThumbnailApplication(PilboxApplication):
