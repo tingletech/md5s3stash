@@ -24,11 +24,10 @@ RUN apt-get update -y && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
-ADD requirements.txt .
+ADD requirements-3.8.txt .
 ADD thumbnail.py .
-ADD md5s3stash.py .
 
-RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install -r requirements-3.8.txt
  
 EXPOSE 8888
 CMD ["python3", "thumbnail.py", "--position=face"]

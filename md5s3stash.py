@@ -2,14 +2,14 @@
 """ md5s3stash
     content addressable storage in AWS S3
 """
-
+from __future__ import unicode_literals
 import sys
 import os
 import argparse
 import tempfile
-import urllib.request, urllib.error, urllib.parse
-import urllib.request, urllib.parse, urllib.error
-import urllib.parse
+import urllib2
+import urllib
+import urlparse
 import base64
 import logging
 import hashlib
@@ -82,9 +82,9 @@ def main(argv=None):
     # connection?
     conn = boto.connect_s3()
     for url in argv.url:
-        print(("{0}\t{1}\t{2}\t{3}".format(
+        print("{0}\t{1}\t{2}\t{3}".format(
             *md5s3stash(url, bucket_base, conn, url_auth=auth, bucket_scheme=argv.bucket_scheme)
-        )))
+        ))
 
 
 def md5s3stash(
@@ -195,9 +195,9 @@ def urlopen_with_auth(url, auth=None, cache={}):
     '''Use urllib2 to open url if the auth is specified.
     auth is tuple of (username, password)
     '''
-    opener = urllib.request.build_opener(DefaultErrorHandler())
-    req = urllib.request.Request(url)
-    p = urllib.parse.urlparse(url)
+    opener = urllib2.build_opener(DefaultErrorHandler())
+    req = urllib2.Request(url)
+    p = urlparse.urlparse(url)
 
     # try to set headers for conditional get request
     try:
@@ -211,11 +211,11 @@ def urlopen_with_auth(url, auth=None, cache={}):
 
     if not auth or is_s3_url(url):
         if p.scheme not in ['http', 'https']:
-            return urllib.request.urlopen(url) # urllib works with normal file paths
+            return urllib.urlopen(url) # urllib works with normal file paths
     else:
         # make sure https
         if p.scheme != 'https':
-            raise urllib.error.URLError('Basic auth not over https is bad idea! \
+            raise urllib2.URLError('Basic auth not over https is bad idea! \
                     scheme:{0}'.format(p.scheme))
         # Need to add header so it gets sent with first request,
         # else redirected to shib
@@ -264,11 +264,11 @@ def checkChunks(url, auth=None, cache={}):
                 if not chunk:
                     break
                 temp_file.write(chunk)
-    except urllib.error.HTTPError as e:
-        print("HTTP Error:", e.code, url)
+    except urllib2.HTTPError, e:
+        print "HTTP Error:", e.code, url
         return False
-    except urllib.error.URLError as e:
-        print("URL Error:", e.reason, url)
+    except urllib2.URLError, e:
+        print "URL Error:", e.reason, url
         return False
 
     md5 = hasher.hexdigest()
@@ -285,7 +285,7 @@ def s3move(place1, place2, mime, s3):
         'mime': mime,
         's3': s3,
     })
-    parts = urllib.parse.urlsplit(place2)
+    parts = urlparse.urlsplit(place2)
     # SplitResult(scheme='s3', netloc='test.pdf', path='/dkd', query=''
     # , fragment='')
     try:
@@ -328,9 +328,9 @@ def image_info(filepath):
 
 # example 11.7 Defining URL handlers
 # http://www.diveintopython.net/http_web_services/etags.html
-class DefaultErrorHandler(urllib.request.HTTPDefaultErrorHandler):
+class DefaultErrorHandler(urllib2.HTTPDefaultErrorHandler):
     def http_error_304(self, req, fp, code, msg, headers):
-        result = urllib.error.HTTPError(
+        result = urllib2.HTTPError(
             req.get_full_url(), code, msg, headers, fp)
         result.status = code
         return result
