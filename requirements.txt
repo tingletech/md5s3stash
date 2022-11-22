@@ -10,7 +10,7 @@ idna==2.7
 md5s3stash==0.4.2
 packaging==17.1
 pilbox==1.3.4
-Pillow==5.2.0
+Pillow==9.3.0
 pycurl==7.43.0.2
 pyparsing==2.2.0
 python-magic==0.4.15
